@@ -1,0 +1,6 @@
+{
+  "name": "အိမ်စရင်း (Myanmar Home Ledger)",
+  "description": "မြန်မာအိမ်ရှင်မ၊ အိမ်ရှင်ထီးများအတွက် ဈေးစရင်း၊ အိမ်သုံးစရိတ်၊ အကောင့်ခွဲစနစ်၊ အသံနှင့် AI အသုံးစရိတ်ခွဲခြမ်းစိတ်ဖြာမှုနှင့် Google Drive sync ပါဝင်သော အိမ်စရင်းမှတ်တမ်း App",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

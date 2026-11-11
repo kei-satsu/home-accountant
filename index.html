@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>အိမ်စရင်း (Myanmar Home Ledger)</title>
+    <meta name="description" content="မြန်မာအိမ်ရှင်မ၊ အိမ်ရှင်ထီးများအတွက် ဈေးစရင်း၊ အိမ်သုံးစရိတ်၊ အကောင့်ခွဲစနစ်၊ အသံနှင့် AI အသုံးစရိတ်ခွဲခြမ်းစိတ်ဖြာမှုနှင့် Google Drive sync ပါဝင်သော အိမ်စရင်းမှတ်တမ်း App" />
+    <meta property="og:title" content="အိမ်စရင်း (Myanmar Home Ledger)" />
+    <meta property="og:description" content="မြန်မာအိမ်ရှင်မ၊ အိမ်ရှင်ထီးများအတွက် ဈေးစရင်း၊ အိမ်သုံးစရိတ်၊ အကောင့်ခွဲစနစ်၊ အသံနှင့် AI အသုံးစရိတ်ခွဲခြမ်းစိတ်ဖြာမှုနှင့် Google Drive sync ပါဝင်သော အိမ်စရင်းမှတ်တမ်း App" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      // In AI Studio environment, HMR WebSocket is disabled - ignore WebSocket errors per constraints
+      window.addEventListener('error', function (event) {
+        if (
+          event.message &&
+          (event.message.includes('WebSocket') || event.message.includes('@vite/client') || event.message.includes('websocket'))
+        ) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function (event) {
+        var reason = event.reason && (event.reason.message || String(event.reason));
+        if (reason && (reason.includes('WebSocket') || reason.includes('@vite/client') || reason.includes('websocket'))) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
