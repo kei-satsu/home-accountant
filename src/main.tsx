@@ -1,5 +1,6 @@
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
+import { PrivacyPolicy } from './components/PrivacyPolicy.tsx';
 import './index.css';
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
@@ -10,4 +11,8 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   });
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+const page = window.location.pathname.replace(/\/+$/, '') === '/privacy-policy'
+  ? <PrivacyPolicy />
+  : <App />;
+
+createRoot(document.getElementById('root')!).render(page);

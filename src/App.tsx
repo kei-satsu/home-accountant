@@ -727,6 +727,12 @@ export default function App() {
         )}
       </main>
 
+      <footer className="border-t border-slate-200 px-4 py-4 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <a href="/privacy-policy" className="font-semibold hover:text-emerald-700 dark:hover:text-emerald-400">
+          ကိုယ်ရေးအချက်အလက် မူဝါဒ
+        </a>
+      </footer>
+
       {/* Floating Action Button for AI Voice & Text (Positioned snugly right above mobile navigation bar) */}
       <div className="fixed bottom-16 md:bottom-8 right-4 md:right-8 z-40 flex flex-col items-end gap-3 pointer-events-auto">
         <button
