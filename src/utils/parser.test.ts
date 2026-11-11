@@ -1,12 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseMyanmarExpenseFallback } from './aiParser';
-import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES } from './ledger';
+import { DEFAULT_CATEGORIES } from './ledger';
+
+const testAccounts = [
+  { id: 'acc-home', name: 'အိမ်စရိတ်' },
+  { id: 'acc-school', name: 'ကျောင်းစရိတ်' },
+  { id: 'acc-emergency', name: 'အရေးပေါ် ရန်ပုံငွေ' },
+  { id: 'acc-cash', name: 'လက်ငင်းငွေ / ပိုက်ဆံအိတ်' },
+  { id: 'acc-digital', name: 'KBZPay / WavePay' },
+];
 
 test('parseMyanmarExpenseFallback parses "ဒီနေ့မနက် မနက်စာ ငါးထောင်ဖိုးစားလိုက်တယ်"', () => {
   const result = parseMyanmarExpenseFallback(
     'ဒီနေ့မနက် မနက်စာ ငါးထောင်ဖိုးစားလိုက်တယ်',
-    DEFAULT_ACCOUNTS,
+    testAccounts,
     DEFAULT_CATEGORIES
   );
 
@@ -21,7 +29,7 @@ test('parseMyanmarExpenseFallback parses "ဒီနေ့မနက် မနက�
 test('parseMyanmarExpenseFallback recognizes explicit account when mentioned', () => {
   const result = parseMyanmarExpenseFallback(
     'အိမ်စရိတ်ထဲက ဈေးဖိုး ၂သောင်းဖိုး ဝယ်လိုက်တယ်',
-    DEFAULT_ACCOUNTS,
+    testAccounts,
     DEFAULT_CATEGORIES
   );
 
@@ -35,7 +43,7 @@ test('parseMyanmarExpenseFallback recognizes explicit account when mentioned', (
 test('parseMyanmarExpenseFallback recognizes income and salary', () => {
   const result = parseMyanmarExpenseFallback(
     'လစာ ၁၀ သိန်း ဝင်တယ် KBZPay ထဲ',
-    DEFAULT_ACCOUNTS,
+    testAccounts,
     DEFAULT_CATEGORIES
   );
 

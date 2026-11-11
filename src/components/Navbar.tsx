@@ -10,6 +10,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  KeyRound,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 
@@ -18,10 +19,10 @@ interface NavbarProps {
   onToggleDarkMode: () => void;
   myanmarNumerals: boolean;
   onToggleMyanmarNumerals: () => void;
-  isPremium: boolean;
-  onTogglePremium: () => void;
   user: User | null;
   onOpenDriveModal: () => void;
+  onOpenApiKeySettings: () => void;
+  hasGeminiApiKey: boolean;
   onOpenAiModal: () => void;
   onOpenAddModal: () => void;
   onOpenTransferModal: () => void;
@@ -49,10 +50,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleDarkMode,
   myanmarNumerals,
   onToggleMyanmarNumerals,
-  isPremium,
-  onTogglePremium,
   user,
   onOpenDriveModal,
+  onOpenApiKeySettings,
+  hasGeminiApiKey,
   onOpenAiModal,
   onOpenAddModal,
   onOpenTransferModal,
@@ -96,10 +97,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <h1 className="text-lg sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
                 အိမ်စရင်း
               </h1>
-              {isPremium && (
+              {hasGeminiApiKey && (
                 <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">
                   <Sparkles className="w-2.5 h-2.5 text-amber-500" />
-                  <span>AI</span>
+                  <span>Gemini</span>
                 </span>
               )}
             </div>
@@ -159,6 +160,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="hidden sm:flex p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
             >
               <ArrowRightLeft className="w-4 h-4" />
+            </button>
+
+            {/* Google Drive Sync */}
+            <button
+              onClick={onOpenApiKeySettings}
+              aria-label="Gemini API key ဆက်တင်"
+              title={hasGeminiApiKey ? 'Gemini API key ထည့်ထားသည်' : 'ကိုယ်ပိုင် Gemini API key ထည့်ရန်'}
+              className={`relative rounded-xl border p-1.5 sm:p-2 transition-colors ${
+                hasGeminiApiKey
+                  ? 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-300'
+                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+              }`}
+            >
+              <KeyRound className="h-4 w-4" />
+              {hasGeminiApiKey && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-emerald-500" />}
             </button>
 
             {/* Google Drive Sync */}

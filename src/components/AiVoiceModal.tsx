@@ -8,10 +8,10 @@ import {
   Check,
   AlertCircle,
   HelpCircle,
-  Crown,
   ChevronRight,
   Loader2,
   Calendar,
+  KeyRound,
 } from 'lucide-react';
 import { Account, Category, Transaction } from '../types';
 import { formatMMK } from '../utils/ledger';
@@ -22,9 +22,10 @@ interface AiVoiceModalProps {
   accounts: Account[];
   categories: Category[];
   balances: Record<string, number>;
+  geminiApiKey: string;
+  onOpenApiKeySettings: () => void;
+  isOnline: boolean;
   myanmarNumerals: boolean;
-  isPremium: boolean;
-  onTogglePremium: () => void;
   onSaveTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
 }
 
@@ -38,6 +39,8 @@ interface ParsedResult {
   needsAccountClarification: boolean;
   clarificationQuestion: string | null;
   aiSummary?: string;
+  source?: string;
+  warning?: string;
 }
 
 export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
@@ -46,9 +49,10 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
   accounts,
   categories,
   balances,
+  geminiApiKey,
+  onOpenApiKeySettings,
+  isOnline,
   myanmarNumerals,
-  isPremium,
-  onTogglePremium,
   onSaveTransaction,
 }) => {
   const [inputText, setInputText] = useState('');
@@ -137,6 +141,11 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
   };
 
   const handleProcessInput = async (textToProcess?: string) => {
+    if (!isOnline) {
+      setErrorMsg('AI ဖြင့် ခွဲခြမ်းစိတ်ဖြာရန် အင်တာနက်ချိတ်ဆက်မှု လိုအပ်ပါသည်။');
+      return;
+    }
+
     const query = (textToProcess || inputText).trim();
     if (!query) {
       setErrorMsg('ကျေးဇူးပြု၍ အသံဖြင့် ပြောပါ သို့မဟုတ် စာရိုက်ထည့်ပါ');
@@ -149,7 +158,10 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
     try {
       const res = await fetch('/api/ai/parse-expense', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(geminiApiKey ? { 'X-Gemini-Api-Key': geminiApiKey } : {}),
+        },
         body: JSON.stringify({
           text: query,
           accounts,
@@ -162,7 +174,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
       }
 
       const data = await res.json();
-      const result: ParsedResult = data.result;
+      const result: ParsedResult = { ...data.result, source: data.source, warning: data.warning };
 
       setParsedResult(result);
       setAmount(result.amount);
@@ -182,7 +194,11 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
       }
     } catch (err: any) {
       console.error(err);
-      setErrorMsg('AI ခွဲခြမ်းစိတ်ဖြာရာတွင် အခက်အခဲရှိနေပါသည်။ လက်ဖြင့် စစ်ဆေးပြင်ဆင်နိုင်ပါသည်။');
+      setErrorMsg(
+        err instanceof TypeError
+          ? 'Internet/server ကို ချိတ်ဆက်မရပါ။ AI သုံးရန် connection ပြန်ရမှ ပြန်စမ်းပါ။'
+          : 'AI ခွဲခြမ်းစိတ်ဖြာရာတွင် အခက်အခဲရှိနေပါသည်။ လက်ဖြင့် စစ်ဆေးပြင်ဆင်နိုင်ပါသည်။'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -250,18 +266,6 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-base sm:text-lg font-bold">AI ဖြင့် စာရင်းသွင်းမည်</h3>
-                {isPremium ? (
-                  <span className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-400 text-amber-950">
-                    <Crown className="w-3 h-3" /> Premium
-                  </span>
-                ) : (
-                  <button
-                    onClick={onTogglePremium}
-                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
-                  >
-                    Free Trial
-                  </button>
-                )}
               </div>
             </div>
           </div>
@@ -276,6 +280,47 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-5 sm:p-6 space-y-5 overflow-y-auto">
+          <div
+            className={`rounded-2xl border p-4 ${
+              geminiApiKey
+                ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30'
+                : 'border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <KeyRound className={`mt-0.5 h-5 w-5 shrink-0 ${
+                geminiApiKey ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+              }`} />
+              <div className="min-w-0 flex-1">
+                <p className={`text-xs font-bold ${
+                  geminiApiKey ? 'text-emerald-900 dark:text-emerald-200' : 'text-amber-900 dark:text-amber-200'
+                }`}>
+                  {geminiApiKey ? 'Gemini API key ထည့်ထားသည်' : 'Gemini API key မထည့်ရသေးပါ'}
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-slate-300">
+                  {geminiApiKey
+                    ? 'စာသားကို Gemini AI ဖြင့် ခွဲခြမ်းစိတ်ဖြာပါမည်။ API key မမှန်ခြင်း သို့မဟုတ် Gemini မရနိုင်ခြင်းရှိပါက စည်းမျဉ်းအခြေပြု parser သို့ ပြောင်းသုံးမည်ဖြစ်ပြီး ရလဒ်ကို စစ်ဆေးပေးပါ။'
+                    : 'တကယ့် Gemini AI ကို သုံးရန် သင့်ကိုယ်ပိုင် Google AI Studio API key လိုအပ်ပါသည်။ Key မထည့်ဘဲ ဆက်သုံးပါက AI မဟုတ်သော စည်းမျဉ်းအခြေပြု parser ဖြင့်သာ ခန့်မှန်းပေးပါမည်။'}
+                </p>
+                <button
+                  type="button"
+                  onClick={onOpenApiKeySettings}
+                  className={`mt-2 text-xs font-bold hover:underline ${
+                    geminiApiKey ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'
+                  }`}
+                >
+                  {geminiApiKey ? 'API key ဆက်တင်ပြင်ရန် →' : 'API key ထည့်ရန် →'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {!isOnline && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              Offline ဖြစ်နေပါသည်။ AI parser သုံးရန် အင်တာနက်လိုအပ်ပြီး၊ ချိတ်ဆက်မှု ပြန်ရမှ အသုံးပြုနိုင်ပါမည်။
+            </div>
+          )}
+
           {/* Voice Input Section with Visualizer */}
           <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-b from-indigo-50/50 to-white dark:from-slate-800/40 dark:to-slate-900 border border-indigo-100 dark:border-slate-800 text-center">
             <div className="relative">
@@ -322,7 +367,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
               />
               <button
                 onClick={() => handleProcessInput()}
-                disabled={isLoading || !inputText.trim()}
+                disabled={isLoading || !isOnline || !inputText.trim()}
                 className="absolute right-2 p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white transition-colors"
                 title="AI ခွဲခြမ်းစိတ်ဖြာမည်"
               >
@@ -348,6 +393,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
                     setInputText(p);
                     handleProcessInput(p);
                   }}
+                  disabled={!isOnline || isLoading}
                   className="text-xs py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors border border-slate-200 dark:border-slate-700 text-left"
                 >
                   "{p}"
@@ -409,10 +455,19 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
           {/* Parsed Result Preview & Confirmation Card */}
           {parsedResult && (
             <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 space-y-4 animate-in fade-in-50">
+              {parsedResult.source !== 'gemini-3.8-flash' && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+                  {parsedResult.source === 'rule-engine'
+                    ? 'Gemini API key မရှိသေးပါ။ အောက်ပါရလဒ်ကို စည်းမျဉ်းအခြေပြု parser ဖြင့် ခန့်မှန်းထားသောကြောင့် မသိမ်းမီ သေချာစစ်ဆေးပါ။'
+                    : parsedResult.warning || 'Gemini AI ကို အသုံးမပြုနိုင်သဖြင့် စည်းမျဉ်းအခြေပြု parser ကို သုံးထားပါသည်။ မသိမ်းမီ သေချာစစ်ဆေးပါ။'}
+                </div>
+              )}
               <div className="flex items-center justify-between border-b border-emerald-200 dark:border-emerald-800 pb-2">
                 <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  AI တွေ့ရှိချက် စစ်ဆေးရန်:
+                  {parsedResult.source === 'gemini-3.8-flash'
+                    ? 'Gemini AI တွေ့ရှိချက် စစ်ဆေးရန်:'
+                    : 'အလိုအလျောက် ခွဲခြမ်းစိတ်ဖြာမှု (စည်းမျဉ်းအခြေပြု) စစ်ဆေးရန်:'}
                 </span>
                 <span
                   className={`text-xs font-bold px-2 py-0.5 rounded-md ${

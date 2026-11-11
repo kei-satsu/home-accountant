@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "အိမ်စရင်း (Myanmar Home Ledger)",
+  "short_name": "အိမ်စရင်း",
+  "description": "မြန်မာအိမ်သုံး ဝင်ငွေ၊ အသုံးစရိတ် စာရင်း",
+  "lang": "my",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#059669",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

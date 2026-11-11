@@ -38,7 +38,7 @@ export interface AppState {
   transactions: Transaction[];
   darkMode: boolean;
   myanmarNumerals: boolean;
-  isPremium: boolean;
+  geminiApiKey?: string;
   lastSyncedAt?: string;
 }
 

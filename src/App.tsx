@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
 import {
   Sparkles,
@@ -11,6 +11,7 @@ import {
   Cloud,
   AlertTriangle,
   X,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   Account,
@@ -20,7 +21,6 @@ import {
   TransactionType,
 } from './types';
 import {
-  DEFAULT_ACCOUNTS,
   DEFAULT_CATEGORIES,
   calculateAccountBalances,
   calculateTotalBalance,
@@ -35,106 +35,73 @@ import { LedgerCharts } from './components/LedgerCharts';
 import { TransactionList } from './components/TransactionList';
 import { DriveSyncModal } from './components/DriveSyncModal';
 import { AccountManagerModal } from './components/AccountManagerModal';
+import { GeminiApiKeyModal } from './components/GeminiApiKeyModal';
+import { getAccessToken } from './services/auth';
+import { uploadBackupToDrive } from './services/driveSync';
 
 const STORAGE_KEY = 'myanmar_household_ledger_v1';
-
-// Initial realistic demo transactions for the current month
-function getInitialTransactions(): Transaction[] {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const d = (day: number) => `${year}-${month}-${String(day).padStart(2, '0')}`;
-
-  return [
-    {
-      id: 'tx-seed-1',
-      amount: 1200000,
-      type: 'income',
-      categoryId: 'cat-salary',
-      categoryName: 'လစာ / ပုံမှန်ဝင်ငွေ',
-      fromAccountId: 'acc-home',
-      date: d(1),
-      note: 'လစဥ်ပုံမှန် လစာဝင်ငွေ',
-      createdAt: Date.now() - 86400000 * 8,
-    },
-    {
-      id: 'tx-seed-2',
-      amount: 25000,
-      type: 'expense',
-      categoryId: 'cat-market',
-      categoryName: 'ဈေးဖိုး / ကုန်စုံ',
-      fromAccountId: 'acc-home',
-      date: d(2),
-      note: 'မနက်ခင်း ဈေးဝယ် (ဟင်းသီးဟင်းရွက်နှင့် အသားငါး)',
-      createdAt: Date.now() - 86400000 * 7,
-    },
-    {
-      id: 'tx-seed-3',
-      amount: 7000,
-      type: 'expense',
-      categoryId: 'cat-food',
-      categoryName: 'အစားအသောက် / မနက်စာ',
-      fromAccountId: 'acc-cash',
-      date: d(3),
-      note: 'မိသားစု မနက်စာ မုန့်ဟင်းခါးနှင့် လက်ဖက်ရည်',
-      createdAt: Date.now() - 86400000 * 6,
-    },
-    {
-      id: 'tx-seed-4',
-      amount: 100000,
-      type: 'transfer',
-      categoryId: '',
-      categoryName: 'ငွေလွှဲ',
-      fromAccountId: 'acc-home',
-      toAccountId: 'acc-school',
-      date: d(4),
-      note: 'ကျောင်းစရိတ်အကောင့်သို့ လွှဲပြောင်းထားရှိခြင်း',
-      createdAt: Date.now() - 86400000 * 5,
-    },
-    {
-      id: 'tx-seed-5',
-      amount: 45000,
-      type: 'expense',
-      categoryId: 'cat-school',
-      categoryName: 'ကျောင်းစရိတ် / ကျူရှင်',
-      fromAccountId: 'acc-school',
-      date: d(5),
-      note: 'ကလေး ကျူရှင်လခနှင့် စာအုပ်ဖိုး',
-      createdAt: Date.now() - 86400000 * 4,
-    },
-    {
-      id: 'tx-seed-6',
-      amount: 32000,
-      type: 'expense',
-      categoryId: 'cat-bills',
-      categoryName: 'အိမ်စရိတ် / မီတာခ / ရေဖိုး',
-      fromAccountId: 'acc-digital',
-      date: d(6),
-      note: 'မီတာခ KBZPay ဖြင့် ပေးချေခြင်း',
-      createdAt: Date.now() - 86400000 * 3,
-    },
-    {
-      id: 'tx-seed-7',
-      amount: 15000,
-      type: 'expense',
-      categoryId: 'cat-health',
-      categoryName: 'ကျန်းမာရေး / ဆေးဝါး',
-      fromAccountId: 'acc-emergency',
-      date: d(7),
-      note: 'မိသားစု အိမ်သုံးဆေးဝါးများ ဝယ်ယူခြင်း',
-      createdAt: Date.now() - 86400000 * 2,
-    },
-  ];
-}
+const GEMINI_API_KEY_STORAGE = `${STORAGE_KEY}_gemini_api_key`;
+const ACCOUNT_MIGRATION_KEY = `${STORAGE_KEY}_main_account_migration`;
+const TRANSACTION_MIGRATION_KEY = `${STORAGE_KEY}_main_account_transactions_migration`;
+const MAIN_ACCOUNT: Account = {
+  id: 'acc-main',
+  name: 'Main Account',
+  icon: 'Wallet',
+  color: '#059669',
+  initialBalance: 0,
+  description: '',
+  isDefault: true,
+};
+const LEGACY_DEMO_ACCOUNTS: Record<string, { name: string; initialBalance: number }> = {
+  'acc-home': { name: 'အိမ်စရိတ်', initialBalance: 300000 },
+  'acc-school': { name: 'ကျောင်းစရိတ်', initialBalance: 150000 },
+  'acc-emergency': { name: 'အရေးပေါ် ရန်ပုံငွေ', initialBalance: 200000 },
+  'acc-cash': { name: 'လက်ငင်းငွေ / ပိုက်ဆံအိတ်', initialBalance: 100000 },
+  'acc-digital': { name: 'KBZPay / WavePay', initialBalance: 250000 },
+};
+const LEGACY_DEMO_TRANSACTION_IDS = new Set([
+  'tx-seed-1',
+  'tx-seed-2',
+  'tx-seed-3',
+  'tx-seed-4',
+  'tx-seed-5',
+  'tx-seed-6',
+  'tx-seed-7',
+]);
 
 export default function App() {
   // Load saved state or default
   const [accounts, setAccounts] = useState<Account[]>(() => {
     try {
+      if (localStorage.getItem(ACCOUNT_MIGRATION_KEY) === 'true') {
+        const saved = localStorage.getItem(`${STORAGE_KEY}_accounts`);
+        return saved ? JSON.parse(saved) as Account[] : [MAIN_ACCOUNT];
+      }
+
       const saved = localStorage.getItem(`${STORAGE_KEY}_accounts`);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const storedAccounts = JSON.parse(saved) as Account[];
+        const openingBalance = storedAccounts.reduce((total, account) => {
+          const legacyAccount = LEGACY_DEMO_ACCOUNTS[account.id];
+          if (
+            legacyAccount &&
+            account.name === legacyAccount.name &&
+            account.initialBalance === legacyAccount.initialBalance
+          ) {
+            return total;
+          }
+          return total + (Number(account.initialBalance) || 0);
+        }, 0);
+
+        const migratedAccounts = [{ ...MAIN_ACCOUNT, initialBalance: openingBalance }];
+        localStorage.setItem(`${STORAGE_KEY}_accounts`, JSON.stringify(migratedAccounts));
+        localStorage.setItem(ACCOUNT_MIGRATION_KEY, 'true');
+        return migratedAccounts;
+      }
+      localStorage.setItem(`${STORAGE_KEY}_accounts`, JSON.stringify([MAIN_ACCOUNT]));
+      localStorage.setItem(ACCOUNT_MIGRATION_KEY, 'true');
     } catch (e) {}
-    return DEFAULT_ACCOUNTS;
+    return [MAIN_ACCOUNT];
   });
 
   const [categories, setCategories] = useState<Category[]>(() => {
@@ -148,9 +115,35 @@ export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem(`${STORAGE_KEY}_transactions`);
-      if (saved) return JSON.parse(saved);
+      if (localStorage.getItem(TRANSACTION_MIGRATION_KEY) === 'true') {
+        return saved ? JSON.parse(saved) as Transaction[] : [];
+      }
+
+      if (saved) {
+        const storedTransactions = JSON.parse(saved) as Transaction[];
+        const migratedTransactions = storedTransactions
+          .filter((tx) => !LEGACY_DEMO_TRANSACTION_IDS.has(tx.id))
+          .map((tx) => ({
+            ...tx,
+            fromAccountId: MAIN_ACCOUNT.id,
+            ...(tx.toAccountId ? { toAccountId: MAIN_ACCOUNT.id } : {}),
+          }));
+        localStorage.setItem(`${STORAGE_KEY}_transactions`, JSON.stringify(migratedTransactions));
+        localStorage.setItem(TRANSACTION_MIGRATION_KEY, 'true');
+        return migratedTransactions;
+      }
+      localStorage.setItem(`${STORAGE_KEY}_transactions`, JSON.stringify([]));
+      localStorage.setItem(TRANSACTION_MIGRATION_KEY, 'true');
     } catch (e) {}
-    return getInitialTransactions();
+    return [];
+  });
+
+  const [geminiApiKey, setGeminiApiKey] = useState(() => {
+    try {
+      return localStorage.getItem(GEMINI_API_KEY_STORAGE) || '';
+    } catch {
+      return '';
+    }
   });
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {
@@ -169,7 +162,6 @@ export default function App() {
     return false; // Default to standard numerals with toggle
   });
 
-  const [isPremium, setIsPremium] = useState<boolean>(true); // Default active for user convenience
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -179,6 +171,15 @@ export default function App() {
 
   // Firebase Auth state
   const [user, setUser] = useState<User | null>(null);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [isDriveSyncReady, setIsDriveSyncReady] = useState(false);
+  const [isDriveKeySyncAuthorized, setIsDriveKeySyncAuthorized] = useState(false);
+  const [driveSyncStatus, setDriveSyncStatus] = useState<'idle' | 'pending' | 'syncing' | 'success' | 'error'>('idle');
+  const [driveSyncMessage, setDriveSyncMessage] = useState('');
+  const [driveSyncRetry, setDriveSyncRetry] = useState(0);
+  const lastDriveSyncSnapshot = useRef('');
+  const driveSyncRetryCount = useRef(0);
+  const driveSyncInFlight = useRef(false);
 
   // Modals
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -187,6 +188,14 @@ export default function App() {
   const [modalInitialType, setModalInitialType] = useState<TransactionType>('expense');
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
   const [isAccountManagerOpen, setIsAccountManagerOpen] = useState(false);
+  const [isGeminiApiKeyModalOpen, setIsGeminiApiKeyModalOpen] = useState(false);
+  const [showGettingStarted, setShowGettingStarted] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(`${STORAGE_KEY}_getting_started_dismissed`) !== 'true';
+    } catch {
+      return true;
+    }
+  });
   const [dismissDriveWarning, setDismissDriveWarning] = useState<boolean>(() => {
     try {
       return localStorage.getItem(`${STORAGE_KEY}_drive_warning_dismissed`) === 'true';
@@ -199,6 +208,13 @@ export default function App() {
     setDismissDriveWarning(true);
     try {
       localStorage.setItem(`${STORAGE_KEY}_drive_warning_dismissed`, 'true');
+    } catch {}
+  };
+
+  const handleDismissGettingStarted = () => {
+    setShowGettingStarted(false);
+    try {
+      localStorage.setItem(`${STORAGE_KEY}_getting_started_dismissed`, 'true');
     } catch {}
   };
 
@@ -219,10 +235,15 @@ export default function App() {
       localStorage.setItem(`${STORAGE_KEY}_categories`, JSON.stringify(categories));
       localStorage.setItem(`${STORAGE_KEY}_transactions`, JSON.stringify(transactions));
       localStorage.setItem(`${STORAGE_KEY}_mm_digits`, JSON.stringify(myanmarNumerals));
+      if (geminiApiKey) {
+        localStorage.setItem(GEMINI_API_KEY_STORAGE, geminiApiKey);
+      } else {
+        localStorage.removeItem(GEMINI_API_KEY_STORAGE);
+      }
     } catch (e) {
       console.error('Failed to save to localStorage:', e);
     }
-  }, [accounts, categories, transactions, myanmarNumerals]);
+  }, [accounts, categories, transactions, myanmarNumerals, geminiApiKey]);
 
   // Init Firebase Auth
   useEffect(() => {
@@ -232,6 +253,26 @@ export default function App() {
     );
     return () => {
       if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    setIsDriveSyncReady(false);
+    setIsDriveKeySyncAuthorized(false);
+    lastDriveSyncSnapshot.current = '';
+    driveSyncRetryCount.current = 0;
+    setDriveSyncStatus('idle');
+    setDriveSyncMessage('');
+  }, [user?.uid]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
@@ -255,15 +296,31 @@ export default function App() {
   };
 
   const handleOpenAddModal = (defaultAccId?: string, type: TransactionType = 'expense') => {
+    if (accounts.length === 0) {
+      setIsAccountManagerOpen(true);
+      return;
+    }
     setModalDefaultAccountId(defaultAccId);
     setModalInitialType(type);
     setIsAddModalOpen(true);
   };
 
   const handleOpenTransferModal = (fromAccId?: string) => {
+    if (accounts.length === 0) {
+      setIsAccountManagerOpen(true);
+      return;
+    }
     setModalDefaultAccountId(fromAccId);
     setModalInitialType('transfer');
     setIsAddModalOpen(true);
+  };
+
+  const handleOpenAiModal = () => {
+    if (accounts.length === 0) {
+      setIsAccountManagerOpen(true);
+      return;
+    }
+    setIsAiModalOpen(true);
   };
 
   const handleSaveAccount = (account: Account) => {
@@ -292,6 +349,9 @@ export default function App() {
     if (restored.transactions && Array.isArray(restored.transactions)) {
       setTransactions(restored.transactions);
     }
+    if (typeof restored.geminiApiKey === 'string') {
+      setGeminiApiKey(restored.geminiApiKey);
+    }
   };
 
   const currentAppState: AppState = {
@@ -300,8 +360,87 @@ export default function App() {
     transactions,
     darkMode,
     myanmarNumerals,
-    isPremium,
+    geminiApiKey: geminiApiKey || undefined,
   };
+
+  const autoSyncState = { ...currentAppState };
+  if (!isDriveKeySyncAuthorized) {
+    delete autoSyncState.geminiApiKey;
+  }
+  const driveSyncSnapshot = JSON.stringify(autoSyncState);
+  const latestDriveSyncSnapshot = useRef(driveSyncSnapshot);
+  latestDriveSyncSnapshot.current = driveSyncSnapshot;
+
+  useEffect(() => {
+    if (!user || !isDriveSyncReady || driveSyncSnapshot === lastDriveSyncSnapshot.current) return;
+    if (!isOnline) {
+      setDriveSyncStatus('pending');
+      setDriveSyncMessage('အင်တာနက်ပြန်ရသောအခါ Drive သို့ အလိုအလျောက် သိမ်းဆည်းပါမည်။');
+      return;
+    }
+
+    let active = true;
+    let retryTimer: number | undefined;
+    const timeout = window.setTimeout(async () => {
+      if (driveSyncInFlight.current) {
+        retryTimer = window.setTimeout(() => {
+          if (active) setDriveSyncRetry((attempt) => attempt + 1);
+        }, 1000);
+        return;
+      }
+
+      driveSyncInFlight.current = true;
+      const token = await getAccessToken();
+      if (!active) {
+        driveSyncInFlight.current = false;
+        return;
+      }
+      if (!token) {
+        driveSyncInFlight.current = false;
+        if (active) {
+          setDriveSyncStatus('pending');
+          setDriveSyncMessage('Drive ခွင့်ပြုချက် မရရှိသေးပါ။ Sync ကိုဖွင့်၍ Google account ဖြင့် ပြန်ချိတ်ဆက်ပါ။');
+        }
+        return;
+      }
+
+      if (active) {
+        setDriveSyncStatus('syncing');
+        setDriveSyncMessage('Google Drive သို့ အလိုအလျောက် သိမ်းဆည်းနေပါသည်...');
+      }
+      try {
+        const result = await uploadBackupToDrive(JSON.parse(driveSyncSnapshot) as AppState, token);
+        if (active) {
+          lastDriveSyncSnapshot.current = driveSyncSnapshot;
+          driveSyncRetryCount.current = 0;
+          setDriveSyncStatus('success');
+          setDriveSyncMessage(`Google Drive သို့ သိမ်းဆည်းပြီးပါပြီ (${new Date(result.modifiedTime).toLocaleTimeString()})`);
+        }
+      } catch (error) {
+        if (active) {
+          console.error('Automatic Drive sync failed:', error);
+          setDriveSyncStatus('error');
+          setDriveSyncMessage('Drive သို့ အလိုအလျောက် သိမ်းမရပါ။ Sync ကိုဖွင့်၍ account ခွင့်ပြုချက်နှင့် အင်တာနက်ကို စစ်ဆေးပါ။');
+          const retryDelay = Math.min(120000, 15000 * 2 ** Math.min(driveSyncRetryCount.current, 3));
+          driveSyncRetryCount.current += 1;
+          retryTimer = window.setTimeout(() => {
+            if (active) setDriveSyncRetry((attempt) => attempt + 1);
+          }, retryDelay);
+        }
+      } finally {
+        driveSyncInFlight.current = false;
+        if (latestDriveSyncSnapshot.current !== driveSyncSnapshot) {
+          setDriveSyncRetry((attempt) => attempt + 1);
+        }
+      }
+    }, 1200);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+      if (retryTimer) window.clearTimeout(retryTimer);
+    };
+  }, [user, isDriveSyncReady, isOnline, driveSyncSnapshot, driveSyncRetry]);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors flex flex-col font-sans pb-24 md:pb-12">
@@ -311,11 +450,11 @@ export default function App() {
         onToggleDarkMode={() => setDarkMode(!darkMode)}
         myanmarNumerals={myanmarNumerals}
         onToggleMyanmarNumerals={() => setMyanmarNumerals(!myanmarNumerals)}
-        isPremium={isPremium}
-        onTogglePremium={() => setIsPremium(!isPremium)}
         user={user}
         onOpenDriveModal={() => setIsDriveModalOpen(true)}
-        onOpenAiModal={() => setIsAiModalOpen(true)}
+        onOpenApiKeySettings={() => setIsGeminiApiKeyModalOpen(true)}
+        hasGeminiApiKey={Boolean(geminiApiKey)}
+        onOpenAiModal={handleOpenAiModal}
         onOpenAddModal={() => handleOpenAddModal()}
         onOpenTransferModal={() => handleOpenTransferModal()}
         selectedMonth={selectedMonth}
@@ -324,6 +463,26 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 md:pb-12 space-y-6">
+        {!isOnline && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            အင်တာနက်မရှိပါ။ သိမ်းထားပြီးသား UI နှင့် စာရင်းများကို ဆက်သုံးနိုင်ပါသည်။ AI နှင့် Google Drive ကို အင်တာနက်ပြန်ရမှ အသုံးပြုနိုင်ပါမည်။
+          </div>
+        )}
+        {user && driveSyncStatus !== 'idle' && (
+          <div className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-xs ${
+            driveSyncStatus === 'error'
+              ? 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200'
+              : 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200'
+          }`}>
+            <span>{driveSyncMessage}</span>
+            <button
+              onClick={() => setIsDriveModalOpen(true)}
+              className="shrink-0 font-bold underline"
+            >
+              Sync
+            </button>
+          </div>
+        )}
         {/* Navigation Tabs (Dashboard, Graphs, Records) */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
           <div className="flex items-center gap-1 sm:gap-2">
@@ -414,6 +573,101 @@ export default function App() {
               </div>
             )}
 
+            {showGettingStarted && (
+              <section className="rounded-2xl border border-sky-200 dark:border-sky-900 bg-sky-50/80 dark:bg-sky-950/30 p-4 sm:p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-xl bg-sky-100 dark:bg-sky-900/60 p-2 text-sky-700 dark:text-sky-300">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                        စတင်အသုံးပြုရန် လမ်းညွှန်
+                      </h2>
+                      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                        ငွေစာရင်းတွေကို ကိုယ်တိုင်ထည့်သွင်းပြီး အောက်ပါအဆင့်တွေအတိုင်း စတင်နိုင်ပါတယ်။
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleDismissGettingStarted}
+                    className="shrink-0 rounded-lg p-1.5 text-slate-500 hover:bg-sky-100 dark:hover:bg-sky-900/50"
+                    title="လမ်းညွှန်ကို ပိတ်မည်"
+                    aria-label="လမ်းညွှန်ကို ပိတ်မည်"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl bg-white/80 dark:bg-slate-900/70 p-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {accounts.some((account) => account.initialBalance > 0) ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sky-100 text-[10px] text-sky-700">၁</span>
+                      )}
+                      Main Account စတင်ပြင်ဆင်ပါ
+                    </div>
+                    <p className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                      Main Account တွင် စတင်လက်ကျန်ငွေကို သတ်မှတ်ပါ။ နောက်ထပ်အကောင့်များကို လိုအပ်မှသာ ကိုယ်တိုင်ထည့်နိုင်ပါတယ်။
+                    </p>
+                    <button
+                      onClick={() => setIsAccountManagerOpen(true)}
+                      className="mt-3 text-xs font-bold text-sky-700 hover:underline dark:text-sky-300"
+                    >
+                      လက်ကျန်ငွေ သတ်မှတ်ရန် →
+                    </button>
+                  </div>
+
+                  <div className="rounded-xl bg-white/80 dark:bg-slate-900/70 p-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {transactions.length > 0 ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sky-100 text-[10px] text-sky-700">၂</span>
+                      )}
+                      ပထမဆုံးစာရင်း မှတ်ပါ
+                    </div>
+                    <p className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                      စာရင်းသွင်းခလုတ် သို့မဟုတ် မိုက်ခရိုဖုန်းခလုတ်ကို သုံးပြီး ဝင်ငွေ၊ အသုံးစရိတ်ကို မှတ်ပါ။
+                    </p>
+                    {!transactions.length && (
+                      <button
+                        onClick={() => handleOpenAddModal()}
+                        disabled={accounts.length === 0}
+                        className="mt-3 text-xs font-bold text-sky-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-sky-300"
+                      >
+                        စာရင်းသွင်းရန် →
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl bg-white/80 dark:bg-slate-900/70 p-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {user ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-sky-100 text-[10px] text-sky-700">၃</span>
+                      )}
+                      ဒေတာကို backup လုပ်ပါ
+                    </div>
+                    <p className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                      စက်ပြောင်းသည့်အခါ မပျောက်စေရန် Google Drive နဲ့ ချိတ်ဆက်ပြီး သိမ်းဆည်းပါ။
+                    </p>
+                    {!user && (
+                      <button
+                        onClick={() => setIsDriveModalOpen(true)}
+                        className="mt-3 text-xs font-bold text-sky-700 hover:underline dark:text-sky-300"
+                      >
+                        Google Drive ချိတ်ရန် →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Accounts & Wealth Glance */}
             <AccountsSummary
               accounts={accounts}
@@ -476,7 +730,7 @@ export default function App() {
       {/* Floating Action Button for AI Voice & Text (Positioned snugly right above mobile navigation bar) */}
       <div className="fixed bottom-16 md:bottom-8 right-4 md:right-8 z-40 flex flex-col items-end gap-3 pointer-events-auto">
         <button
-          onClick={() => setIsAiModalOpen(true)}
+          onClick={handleOpenAiModal}
           className="group relative flex items-center justify-center w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-600/30 transition-transform hover:scale-105 active:scale-95 cursor-pointer"
           title="အသံဖြင့် AI စာရင်းသွင်းမည်"
           aria-label="အသံဖြင့် AI စာရင်းသွင်းမည်"
@@ -557,9 +811,10 @@ export default function App() {
         accounts={accounts}
         categories={categories}
         balances={balances}
+        geminiApiKey={geminiApiKey}
+        onOpenApiKeySettings={() => setIsGeminiApiKeyModalOpen(true)}
+        isOnline={isOnline}
         myanmarNumerals={myanmarNumerals}
-        isPremium={isPremium}
-        onTogglePremium={() => setIsPremium(!isPremium)}
         onSaveTransaction={handleSaveTransaction}
       />
 
@@ -579,11 +834,28 @@ export default function App() {
         isOpen={isDriveModalOpen}
         onClose={() => setIsDriveModalOpen(false)}
         user={user}
+        isOnline={isOnline}
+        isDriveSyncReady={isDriveSyncReady}
         appState={currentAppState}
         onRestoreState={handleRestoreState}
-        onUpdateSyncTime={(time) => {
-          console.log('Synced at', time);
+        onUpdateSyncTime={(time, includesApiKey) => {
+          lastDriveSyncSnapshot.current = driveSyncSnapshot;
+          if (includesApiKey !== undefined) {
+            setIsDriveKeySyncAuthorized(includesApiKey);
+          }
+          setIsDriveSyncReady(true);
+          setDriveSyncStatus('success');
+          setDriveSyncMessage(`Google Drive သို့ သိမ်းဆည်းပြီးပါပြီ (${new Date(time).toLocaleTimeString()})`);
         }}
+        onDriveSyncReady={setIsDriveSyncReady}
+      />
+
+      <GeminiApiKeyModal
+        isOpen={isGeminiApiKeyModalOpen}
+        apiKey={geminiApiKey}
+        isDriveConnected={Boolean(user)}
+        onClose={() => setIsGeminiApiKeyModalOpen(false)}
+        onSave={setGeminiApiKey}
       />
 
       <AccountManagerModal

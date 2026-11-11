@@ -39,10 +39,25 @@ app.post('/api/ai/parse-expense', async (req, res) => {
       return res.status(400).json({ error: 'Text prompt is required' });
     }
 
+    const requestApiKey = req.get('x-gemini-api-key')?.trim();
+    if (requestApiKey && requestApiKey.length > 1024) {
+      return res.status(400).json({ error: 'Gemini API key is invalid' });
+    }
+
     const accountList = Array.isArray(accounts) ? accounts : [];
     const categoryList = Array.isArray(categories) ? categories : [];
+    const requestAiClient = requestApiKey
+      ? new GoogleGenAI({
+          apiKey: requestApiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build',
+            },
+          },
+        })
+      : aiClient;
 
-    if (!aiClient) {
+    if (!requestAiClient) {
       // Fallback parser if API key is not yet configured
       const fallbackResult = parseMyanmarExpenseFallback(text, accountList, categoryList);
       return res.json({ result: fallbackResult, source: 'rule-engine' });
@@ -75,7 +90,7 @@ Your task:
       setTimeout(() => reject(new Error('Gemini API timeout')), 4500)
     );
 
-    const generatePromise = aiClient.models.generateContent({
+    const generatePromise = requestAiClient.models.generateContent({
       model: 'gemini-3.8-flash',
       contents: prompt,
       config: {
@@ -107,18 +122,29 @@ Your task:
     if (!parsed.amount || parsed.amount <= 0) {
       const fallback = parseMyanmarExpenseFallback(text, accountList, categoryList);
       if (fallback.amount > 0) {
-        return res.json({ result: fallback, source: 'hybrid-fallback' });
+        return res.json({
+          result: fallback,
+          source: 'hybrid-fallback',
+          warning: 'Gemini could not identify the amount; the local parser was used.',
+        });
       }
     }
 
     return res.json({ result: parsed, source: 'gemini-3.8-flash' });
   } catch (err: any) {
-    console.error('Error in /api/ai/parse-expense:', err);
+    console.error(
+      'Gemini parsing failed:',
+      err instanceof Error ? err.name : 'Unknown error'
+    );
     // Graceful fallback to rule parser
     try {
       const { text, accounts, categories } = req.body;
       const fallbackResult = parseMyanmarExpenseFallback(text || '', accounts || [], categories || []);
-      return res.json({ result: fallbackResult, source: 'error-fallback' });
+      return res.json({
+        result: fallbackResult,
+        source: 'error-fallback',
+        warning: 'Gemini could not be reached. The local rule-based parser was used; check the API key and network connection.',
+      });
     } catch (e) {
       return res.status(500).json({ error: 'Failed to parse expense text' });
     }

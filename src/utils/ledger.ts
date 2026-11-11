@@ -26,50 +26,6 @@ export function formatMMK(amount: number, useMyanmarDigits = false): string {
   return `${formatted} Ks`;
 }
 
-export const DEFAULT_ACCOUNTS: Account[] = [
-  {
-    id: 'acc-home',
-    name: 'အိမ်စရိတ်',
-    icon: 'Home',
-    color: '#059669', // Emerald
-    initialBalance: 300000,
-    description: 'လစဥ် အိမ်သုံးစရိတ်၊ မီးဖိုချောင်၊ မီတာခ၊ ရေဖိုး',
-    isDefault: true,
-  },
-  {
-    id: 'acc-school',
-    name: 'ကျောင်းစရိတ်',
-    icon: 'GraduationCap',
-    color: '#2563EB', // Blue
-    initialBalance: 150000,
-    description: 'ကလေးကျောင်းလခ၊ ကျူရှင်၊ စာရေးကိရိယာစရိတ်',
-  },
-  {
-    id: 'acc-emergency',
-    name: 'အရေးပေါ် ရန်ပုံငွေ',
-    icon: 'ShieldAlert',
-    color: '#DC2626', // Red
-    initialBalance: 200000,
-    description: 'ကျန်းမာရေး၊ မမျှော်လင့်သော ကိစ္စများအတွက် အရေးပေါ်ငွေ',
-  },
-  {
-    id: 'acc-cash',
-    name: 'လက်ငင်းငွေ / ပိုက်ဆံအိတ်',
-    icon: 'Wallet',
-    color: '#D97706', // Amber
-    initialBalance: 100000,
-    description: 'နေ့စဉ် ဈေးဖိုး၊ လက်ဖက်ရည်ဖိုး လက်ထဲရှိငွေ',
-  },
-  {
-    id: 'acc-digital',
-    name: 'KBZPay / WavePay',
-    icon: 'Smartphone',
-    color: '#7C3AED', // Violet
-    initialBalance: 250000,
-    description: 'အွန်လိုင်း ဘဏ်နှင့် မိုဘိုင်းပိုက်ဆံအိတ်',
-  },
-];
-
 export const DEFAULT_CATEGORIES: Category[] = [
   // Expense Categories
   { id: 'cat-market', name: 'ဈေးဖိုး / ကုန်စုံ', icon: 'ShoppingBasket', color: '#10B981', type: 'expense' },

@@ -83,19 +83,21 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
 
             <div className="mt-6 pt-4 border-t border-white/15 flex items-center gap-3">
               <button
-                onClick={() => onOpenAddModal()}
+                onClick={() => accounts.length ? onOpenAddModal() : onOpenManageAccounts()}
                 className="flex-1 py-2.5 px-4 rounded-xl bg-white text-emerald-900 hover:bg-emerald-50 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-98"
               >
                 <PlusCircle className="w-4 h-4 text-emerald-700" />
-                စာရင်းသွင်း
+                {accounts.length ? 'စာရင်းသွင်း' : 'ပထမဆုံးအကောင့် ဖွင့်မည်'}
               </button>
-              <button
-                onClick={() => onOpenTransferModal()}
-                className="py-2.5 px-4 rounded-xl bg-emerald-800/80 hover:bg-emerald-800 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 border border-white/20 transition-all active:scale-98"
-              >
-                <ArrowRightLeft className="w-4 h-4" />
-                ငွေလွှဲ
-              </button>
+              {accounts.length > 0 && (
+                <button
+                  onClick={() => onOpenTransferModal()}
+                  className="py-2.5 px-4 rounded-xl bg-emerald-800/80 hover:bg-emerald-800 text-white text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 border border-white/20 transition-all active:scale-98"
+                >
+                  <ArrowRightLeft className="w-4 h-4" />
+                  ငွေလွှဲ
+                </button>
+              )}
             </div>
           </div>
           {/* Subtle background decoration */}
@@ -169,7 +171,18 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
+        {accounts.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/70 dark:bg-slate-900/50 px-5 py-8 text-center">
+            <Wallet className="w-8 h-8 mx-auto text-slate-400 mb-2" />
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              အကောင့် မရှိသေးပါ
+            </p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              ငွေစာရင်းစတင်ရန် သင့်ဘဏ်၊ ပိုက်ဆံအိတ် သို့မဟုတ် အခြားအကောင့်ကို ထည့်ပါ။
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
           {accounts.map((acc) => {
             const accBalance = balances[acc.id] ?? acc.initialBalance;
             const ratio = totalBalance > 0 ? Math.max(0, Math.min(100, Math.round((accBalance / totalBalance) * 100))) : 0;
@@ -242,7 +255,8 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
               </div>
             );
           })}
-        </div>
+          </div>
+        )}
       </div>
     </section>
   );

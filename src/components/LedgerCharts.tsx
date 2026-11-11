@@ -113,7 +113,12 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
             )}
           </div>
 
-          {/* Responsive SVG Bar Chart */}
+          {dailyData.every((day) => day.amount === 0) ? (
+            <div className="text-center py-12 text-xs text-slate-400">
+              ယခုလအတွက် အသုံးစရိတ် မှတ်တမ်းမရှိသေးပါ
+            </div>
+          ) : (
+          /* Responsive SVG Bar Chart */
           <div className="relative h-56 sm:h-64 w-full pt-4">
             <div className="flex items-end justify-between h-48 gap-1 border-b border-slate-200 dark:border-slate-800 pb-1">
               {dailyData.map((d, index) => {
@@ -152,7 +157,7 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
                     >
                       {index + 1}
                     </span>
-                  </div>
+                    </div>
                 );
               })}
             </div>
@@ -164,6 +169,7 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
               <span>လကုန် ({dailyData.length} ရက်)</span>
             </div>
           </div>
+          )}
         </div>
       )}
 
@@ -263,6 +269,11 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
           <p className="text-xs text-slate-500 dark:text-slate-400">
             အကောင့်တစ်ခုစီတွင် လက်ရှိကျန်ရှိနေသော ငွေပမာဏ နှိုင်းယှဉ်ချက်
           </p>
+          {accounts.length === 0 ? (
+            <div className="text-center py-10 text-xs text-slate-400">
+              အကောင့်ထည့်ပြီးနောက် လက်ကျန်ငွေကို ဤနေရာတွင် ကြည့်နိုင်ပါသည်
+            </div>
+          ) : (
           <div className="space-y-3">
             {accounts.map((acc) => {
               const bal = balances[acc.id] ?? acc.initialBalance;
@@ -299,6 +310,7 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
               );
             })}
           </div>
+          )}
         </div>
       )}
     </div>

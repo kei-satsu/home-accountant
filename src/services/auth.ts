@@ -6,6 +6,7 @@ import {
   onAuthStateChanged,
   User,
   signOut,
+  reauthenticateWithPopup,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -54,6 +55,26 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
   } finally {
     isSigningIn = false;
   }
+};
+
+export const reauthenticateDriveAccess = async (): Promise<string> => {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('Sign in with the Google account that owns this Drive backup.');
+  }
+
+  const reauthProvider = new GoogleAuthProvider();
+  reauthProvider.addScope('https://www.googleapis.com/auth/drive.file');
+  reauthProvider.setCustomParameters({ prompt: 'select_account' });
+
+  const result = await reauthenticateWithPopup(currentUser, reauthProvider);
+  const credential = GoogleAuthProvider.credentialFromResult(result);
+  if (!credential?.accessToken) {
+    throw new Error('Google did not provide Drive access. Please authorize Drive access and try again.');
+  }
+
+  cachedAccessToken = credential.accessToken;
+  return credential.accessToken;
 };
 
 export const getAccessToken = async (): Promise<string | null> => {

@@ -13,7 +13,12 @@ import {
   HardDrive,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
-import { googleSignIn, logout, getAccessToken } from '../services/auth';
+import {
+  googleSignIn,
+  logout,
+  getAccessToken,
+  reauthenticateDriveAccess,
+} from '../services/auth';
 import {
   findDriveBackupFile,
   uploadBackupToDrive,
@@ -25,18 +30,24 @@ interface DriveSyncModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  isOnline: boolean;
+  isDriveSyncReady: boolean;
   appState: AppState;
   onRestoreState: (restoredState: AppState) => void;
-  onUpdateSyncTime: (timestamp: string) => void;
+  onUpdateSyncTime: (timestamp: string, includesApiKey?: boolean) => void;
+  onDriveSyncReady: (ready: boolean) => void;
 }
 
 export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
   isOpen,
   onClose,
   user,
+  isOnline,
+  isDriveSyncReady,
   appState,
   onRestoreState,
   onUpdateSyncTime,
+  onDriveSyncReady,
 }) => {
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -50,21 +61,30 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
     if (isOpen && user) {
       checkDriveStatus();
     }
-  }, [isOpen, user]);
+  }, [isOpen, user, isOnline]);
 
   const checkDriveStatus = async () => {
     try {
       setIsCheckingDrive(true);
+      if (!isOnline) {
+        onDriveSyncReady(false);
+        return;
+      }
       const token = await getAccessToken();
-      if (!token) return;
+      if (!token) {
+        onDriveSyncReady(false);
+        return;
+      }
       const file = await findDriveBackupFile(token);
       if (file) {
         setDriveFile({ id: file.id, modifiedTime: file.modifiedTime });
       } else {
         setDriveFile(null);
       }
+      onDriveSyncReady(isDriveSyncReady || !file);
     } catch (err: any) {
       console.warn('Failed to query drive file:', err);
+      onDriveSyncReady(false);
     } finally {
       setIsCheckingDrive(false);
     }
@@ -84,6 +104,10 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
         const file = await findDriveBackupFile(token);
         if (file) {
           setDriveFile({ id: file.id, modifiedTime: file.modifiedTime });
+          onDriveSyncReady(false);
+        } else {
+          setDriveFile(null);
+          onDriveSyncReady(true);
         }
       }
     } catch (err: any) {
@@ -101,14 +125,12 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
     setIsSyncing(true);
     setStatusMsg(null);
     try {
-      const token = await getAccessToken();
-      if (!token) {
-        throw new Error('Access token unavailable. Please sign in again.');
-      }
+      const token = await reauthenticateDriveAccess();
 
       const result = await uploadBackupToDrive(appState, token);
       setDriveFile({ id: result.fileId, modifiedTime: result.modifiedTime });
-      onUpdateSyncTime(result.modifiedTime);
+      onDriveSyncReady(true);
+      onUpdateSyncTime(result.modifiedTime, Boolean(appState.geminiApiKey));
       setStatusMsg({
         type: 'success',
         text: 'Google Drive ပေါ်သို့ စာရင်းဒေတာများ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ!',
@@ -130,12 +152,12 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
     setStatusMsg(null);
     setShowRestoreConfirm(false);
     try {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Token unavailable');
+      const token = await reauthenticateDriveAccess();
 
       const { state, modifiedTime } = await downloadBackupFromDrive(driveFile.id, token);
       onRestoreState(state);
-      onUpdateSyncTime(modifiedTime);
+      onDriveSyncReady(true);
+      onUpdateSyncTime(modifiedTime, Boolean(state.geminiApiKey));
       setStatusMsg({
         type: 'success',
         text: 'Google Drive ပေါ်ရှိ စာရင်းဒေတာများကို အောင်မြင်စွာ ပြန်လည်ရယူပြီးပါပြီ!',
@@ -153,7 +175,9 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
 
   // Local JSON File export
   const handleExportLocalJson = () => {
-    const jsonStr = JSON.stringify(appState, null, 2);
+    const localBackup = { ...appState };
+    delete localBackup.geminiApiKey;
+    const jsonStr = JSON.stringify(localBackup, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -220,6 +244,12 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
 
         {/* Content */}
         <div className="p-5 sm:p-6 space-y-5 overflow-y-auto">
+          {!isOnline && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              အင်တာနက်မရှိပါ။ Drive sync ကို အင်တာနက်ပြန်ရသောအခါ ပြန်အသုံးပြုနိုင်ပါမည်။
+            </div>
+          )}
+
           {/* User Sign-In Status Card */}
           {user ? (
             <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
@@ -278,7 +308,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                 <button
                   type="button"
                   onClick={handleGoogleLogin}
-                  disabled={isSigningIn}
+                  disabled={isSigningIn || !isOnline}
                   className="flex items-center gap-3 px-5 py-2.5 rounded-full bg-white text-slate-700 hover:bg-slate-50 font-semibold text-xs shadow-md border border-slate-300 transition-all active:scale-98"
                 >
                   <svg className="w-4 h-4" viewBox="0 0 48 48">
@@ -339,7 +369,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={handleBackupNow}
-                  disabled={isSyncing}
+                  disabled={isSyncing || !isOnline}
                   className="py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs flex flex-col items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all active:scale-98"
                 >
                   {isSyncing ? (
@@ -347,21 +377,23 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                   ) : (
                     <CloudUpload className="w-5 h-5" />
                   )}
-                  <span>Drive သို့ သိမ်းမည်</span>
+                  <span>Google account အတည်ပြုပြီး သိမ်းမည်</span>
                   <span className="text-[10px] font-normal text-blue-100">
-                    လက်ရှိစာရင်းများကို Drive သို့ ပို့မည်
+                    {appState.geminiApiKey
+                      ? 'စာရင်းနှင့် API key ကို Drive သို့ backup လုပ်မည်'
+                      : 'လက်ရှိစာရင်းများကို Drive သို့ ပို့မည်'}
                   </span>
                 </button>
 
                 <button
                   onClick={() => setShowRestoreConfirm(true)}
-                  disabled={isSyncing || !driveFile}
+                  disabled={isSyncing || !driveFile || !isOnline}
                   className="py-3 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-50 text-slate-800 dark:text-slate-200 font-bold text-xs flex flex-col items-center gap-1.5 border border-slate-200 dark:border-slate-700 transition-all active:scale-98"
                 >
                   <CloudDownload className="w-5 h-5 text-emerald-600" />
                   <span>Drive မှ ပြန်ယူမည်</span>
                   <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">
-                    Drive ရှိ အချက်အလက်များ ပြန်ဆွဲမည်
+                    Google account ကို ပြန်အတည်ပြုပြီး Drive မှ ပြန်ယူမည်
                   </span>
                 </button>
               </div>
