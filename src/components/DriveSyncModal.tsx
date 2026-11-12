@@ -25,6 +25,7 @@ import {
   downloadBackupFromDrive,
 } from '../services/driveSync';
 import { AppState } from '../types';
+import { Localized, useLanguage } from '../i18n';
 
 interface DriveSyncModalProps {
   isOpen: boolean;
@@ -49,6 +50,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
   onUpdateSyncTime,
   onDriveSyncReady,
 }) => {
+  const { t } = useLanguage();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCheckingDrive, setIsCheckingDrive] = useState(false);
@@ -98,7 +100,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
       if (res) {
         setStatusMsg({
           type: 'success',
-          text: `မင်္ဂလာပါ ${res.user.displayName || res.user.email}! Google Drive နှင့် အောင်မြင်စွာ ချိတ်ဆက်ပြီးပါပြီ။`,
+          text: `${t('မင်္ဂလာပါ ')}${res.user.displayName || res.user.email}! ${t('Google Drive နှင့် အောင်မြင်စွာ ချိတ်ဆက်ပြီးပါပြီ။')}`,
         });
         const token = res.accessToken;
         const file = await findDriveBackupFile(token);
@@ -114,7 +116,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
       console.error(err);
       setStatusMsg({
         type: 'error',
-        text: 'Google အကောင့်ဖြင့် ဝင်ရောက်ခြင်း မအောင်မြင်ပါ။ ကျေးဇူးပြု၍ ပြန်လည်စမ်းသပ်ကြည့်ပါ။',
+        text: t('Google အကောင့်ဖြင့် ဝင်ရောက်ခြင်း မအောင်မြင်ပါ။ ကျေးဇူးပြု၍ ပြန်လည်စမ်းသပ်ကြည့်ပါ။'),
       });
     } finally {
       setIsSigningIn(false);
@@ -133,13 +135,13 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
       onUpdateSyncTime(result.modifiedTime, Boolean(appState.geminiApiKey));
       setStatusMsg({
         type: 'success',
-        text: 'Google Drive ပေါ်သို့ စာရင်းဒေတာများ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ!',
+        text: t('Google Drive ပေါ်သို့ စာရင်းဒေတာများ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ!'),
       });
     } catch (err: any) {
       console.error(err);
       setStatusMsg({
         type: 'error',
-        text: 'Google Drive သို့ သိမ်းဆည်းရာတွင် အဆင်မပြေဖြစ်သွားပါသည်။ (Error: ' + err.message + ')',
+        text: `${t('Google Drive သို့ သိမ်းဆည်းရာတွင် အဆင်မပြေဖြစ်သွားပါသည်။ (Error: ')}${err.message})`,
       });
     } finally {
       setIsSyncing(false);
@@ -160,13 +162,13 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
       onUpdateSyncTime(modifiedTime, Boolean(state.geminiApiKey));
       setStatusMsg({
         type: 'success',
-        text: 'Google Drive ပေါ်ရှိ စာရင်းဒေတာများကို အောင်မြင်စွာ ပြန်လည်ရယူပြီးပါပြီ!',
+        text: t('Google Drive ပေါ်ရှိ စာရင်းဒေတာများကို အောင်မြင်စွာ ပြန်လည်ရယူပြီးပါပြီ!'),
       });
     } catch (err: any) {
       console.error(err);
       setStatusMsg({
         type: 'error',
-        text: 'Drive မှ ဒေတာရယူရာတွင် အဆင်မပြေဖြစ်သွားပါသည်: ' + err.message,
+        text: `${t('Drive မှ ဒေတာရယူရာတွင် အဆင်မပြေဖြစ်သွားပါသည်: ')}${err.message}`,
       });
     } finally {
       setIsSyncing(false);
@@ -200,7 +202,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
           onRestoreState(parsed);
           setStatusMsg({
             type: 'success',
-            text: 'Local JSON ဖိုင်မှ ဒေတာများကို အောင်မြင်စွာ ပြန်လည်ထည့်သွင်းပြီးပါပြီ!',
+            text: t('Local JSON ဖိုင်မှ ဒေတာများကို အောင်မြင်စွာ ပြန်လည်ထည့်သွင်းပြီးပါပြီ!'),
           });
         } else {
           throw new Error('Invalid format');
@@ -208,7 +210,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
       } catch (err) {
         setStatusMsg({
           type: 'error',
-          text: 'ဖိုင်ပုံစံ မမှန်ကန်ပါ။ ကျေးဇူးပြု၍ စစ်ဆေးပါ။',
+          text: t('ဖိုင်ပုံစံ မမှန်ကန်ပါ။ ကျေးဇူးပြု၍ စစ်ဆေးပါ။'),
         });
       }
     };
@@ -218,6 +220,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
   if (!isOpen) return null;
 
   return (
+    <Localized>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
@@ -480,5 +483,6 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
         </div>
       </div>
     </div>
+    </Localized>
   );
 };

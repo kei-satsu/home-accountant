@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Account, Category, Transaction } from '../types';
 import { formatMMK } from '../utils/ledger';
+import { Localized, useLanguage } from '../i18n';
 
 interface AiVoiceModalProps {
   isOpen: boolean;
@@ -55,6 +56,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
   myanmarNumerals,
   onSaveTransaction,
 }) => {
+  const { t } = useLanguage();
   const [inputText, setInputText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -100,7 +102,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
         console.warn('Speech recognition error:', event.error);
         setIsListening(false);
         if (event.error === 'not-allowed') {
-          setErrorMsg('မိုက်ခရိုဖုန်း အသုံးပြုခွင့် ပေးထားရန် လိုအပ်ပါသည်။');
+          setErrorMsg(t('မိုက်ခရိုဖုန်း အသုံးပြုခွင့် ပေးထားရန် လိုအပ်ပါသည်။'));
         }
       };
 
@@ -122,7 +124,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
 
   const toggleListening = () => {
     if (!speechSupported) {
-      setErrorMsg('သင့် browser တွင် Speech Recognition အဆင်မပြေပါက စာရိုက်၍ ထည့်သွင်းနိုင်ပါသည်။');
+      setErrorMsg(t('သင့် browser တွင် Speech Recognition အဆင်မပြေပါက စာရိုက်၍ ထည့်သွင်းနိုင်ပါသည်။'));
       return;
     }
 
@@ -142,13 +144,13 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
 
   const handleProcessInput = async (textToProcess?: string) => {
     if (!isOnline) {
-      setErrorMsg('AI ဖြင့် ခွဲခြမ်းစိတ်ဖြာရန် အင်တာနက်ချိတ်ဆက်မှု လိုအပ်ပါသည်။');
+      setErrorMsg(t('AI ဖြင့် ခွဲခြမ်းစိတ်ဖြာရန် အင်တာနက်ချိတ်ဆက်မှု လိုအပ်ပါသည်။'));
       return;
     }
 
     const query = (textToProcess || inputText).trim();
     if (!query) {
-      setErrorMsg('ကျေးဇူးပြု၍ အသံဖြင့် ပြောပါ သို့မဟုတ် စာရိုက်ထည့်ပါ');
+      setErrorMsg(t('ကျေးဇူးပြု၍ အသံဖြင့် ပြောပါ သို့မဟုတ် စာရိုက်ထည့်ပါ'));
       return;
     }
 
@@ -196,8 +198,8 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
       console.error(err);
       setErrorMsg(
         err instanceof TypeError
-          ? 'Internet/server ကို ချိတ်ဆက်မရပါ။ AI သုံးရန် connection ပြန်ရမှ ပြန်စမ်းပါ။'
-          : 'AI ခွဲခြမ်းစိတ်ဖြာရာတွင် အခက်အခဲရှိနေပါသည်။ လက်ဖြင့် စစ်ဆေးပြင်ဆင်နိုင်ပါသည်။'
+          ? t('Internet/server ကို ချိတ်ဆက်မရပါ။ AI သုံးရန် connection ပြန်ရမှ ပြန်စမ်းပါ။')
+          : t('AI ခွဲခြမ်းစိတ်ဖြာရာတွင် အခက်အခဲရှိနေပါသည်။ လက်ဖြင့် စစ်ဆေးပြင်ဆင်နိုင်ပါသည်။')
       );
     } finally {
       setIsLoading(false);
@@ -217,12 +219,12 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
 
   const handleConfirmSave = () => {
     if (!amount || amount <= 0) {
-      setErrorMsg('ပမာဏ မမှန်ကန်ပါ။ ကျေးဇူးပြု၍ ပြန်လည်စစ်ဆေးပါ။');
+      setErrorMsg(t('ပမာဏ မမှန်ကန်ပါ။ ကျေးဇူးပြု၍ ပြန်လည်စစ်ဆေးပါ။'));
       return;
     }
 
     if (!selectedAccountId) {
-      setErrorMsg('ကျေးဇူးပြု၍ အကောင့်တစ်ခု ရွေးချယ်ပေးပါ။');
+      setErrorMsg(t('ကျေးဇူးပြု၍ အကောင့်တစ်ခု ရွေးချယ်ပေးပါ။'));
       return;
     }
 
@@ -255,6 +257,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
   if (!isOpen) return null;
 
   return (
+    <Localized>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Header */}
@@ -577,5 +580,6 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
         </div>
       </div>
     </div>
+    </Localized>
   );
 };

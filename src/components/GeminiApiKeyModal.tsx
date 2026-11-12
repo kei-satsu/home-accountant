@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff, KeyRound, X } from 'lucide-react';
+import { Localized } from '../i18n';
 
 interface GeminiApiKeyModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
   };
 
   return (
+    <Localized>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center justify-between bg-gradient-to-r from-violet-600 to-indigo-600 p-5 text-white">
@@ -136,5 +138,6 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
         </form>
       </div>
     </div>
+    </Localized>
   );
 };

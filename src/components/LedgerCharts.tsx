@@ -19,6 +19,7 @@ import {
   calculateDailyExpenses,
   formatMMK,
 } from '../utils/ledger';
+import { Localized, useLanguage } from '../i18n';
 
 interface LedgerChartsProps {
   transactions: Transaction[];
@@ -37,6 +38,7 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
   selectedMonth,
   myanmarNumerals,
 }) => {
+  const { language } = useLanguage();
   const [chartMode, setChartMode] = useState<'daily' | 'category' | 'accounts'>('daily');
   const [breakdownType, setBreakdownType] = useState<'expense' | 'income'>('expense');
   const [hoveredDay, setHoveredDay] = useState<DailyExpenseItem | null>(null);
@@ -53,7 +55,8 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
   const totalCategoryAmount = categoryBreakdown.reduce((sum, item) => sum + item.amount, 0);
 
   return (
-    <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 shadow-sm space-y-6">
+    <Localized>
+    <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-6 shadow-sm space-y-5 sm:space-y-6">
       {/* Chart Header & Mode Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div>
@@ -64,10 +67,10 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold self-start sm:self-auto">
+        <div className="flex max-w-full items-center overflow-x-auto p-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-semibold self-start sm:self-auto">
           <button
             onClick={() => setChartMode('daily')}
-            className={`py-1.5 px-3 rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`shrink-0 whitespace-nowrap py-1.5 px-3 rounded-lg transition-all flex items-center gap-1.5 ${
               chartMode === 'daily'
                 ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -78,7 +81,7 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
           </button>
           <button
             onClick={() => setChartMode('category')}
-            className={`py-1.5 px-3 rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`shrink-0 whitespace-nowrap py-1.5 px-3 rounded-lg transition-all flex items-center gap-1.5 ${
               chartMode === 'category'
                 ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -89,7 +92,7 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
           </button>
           <button
             onClick={() => setChartMode('accounts')}
-            className={`py-1.5 px-3 rounded-lg transition-all flex items-center gap-1.5 ${
+            className={`shrink-0 whitespace-nowrap py-1.5 px-3 rounded-lg transition-all flex items-center gap-1.5 ${
               chartMode === 'accounts'
                 ? 'bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -102,7 +105,7 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
       </div>
 
       {/* Mode 1: Daily Spending Bar Chart */}
-      {chartMode === 'daily' && (
+      {      chartMode === 'daily' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <span>ရက်စွဲအလိုက် အသုံးစရိတ်</span>
@@ -166,7 +169,11 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
             <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 mt-2">
               <span>၁ ရက်</span>
               <span>လလယ် (၁၅ ရက်)</span>
-              <span>လကုန် ({dailyData.length} ရက်)</span>
+              <span>
+                {language === 'en'
+                  ? `End of month (${dailyData.length} days)`
+                  : `လကုန် (${dailyData.length} ရက်)`}
+              </span>
             </div>
           </div>
           )}
@@ -177,7 +184,7 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
       {chartMode === 'category' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setBreakdownType('expense')}
                 className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
@@ -314,5 +321,6 @@ export const LedgerCharts: React.FC<LedgerChartsProps> = ({
         </div>
       )}
     </div>
+    </Localized>
   );
 };

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Account } from '../types';
 import { formatMMK } from '../utils/ledger';
+import { Localized, useLanguage } from '../i18n';
 
 interface AccountsSummaryProps {
   accounts: Account[];
@@ -55,14 +56,16 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
   onOpenTransferModal,
   onOpenManageAccounts,
 }) => {
+  const { language } = useLanguage();
   const netSavings = monthIncome - monthExpense;
 
   return (
+    <Localized>
     <section className="space-y-6">
       {/* Top Total Wealth & Monthly Cash Flow Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {/* Main Card: Total Net Balance */}
-        <div className="md:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-700 to-emerald-900 p-6 text-white shadow-xl shadow-emerald-700/20">
+        <div className="col-span-2 md:col-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-700 to-emerald-900 p-5 sm:p-6 text-white shadow-xl shadow-emerald-700/20">
           <div className="relative z-10 flex flex-col justify-between h-full">
             <div>
               <div className="flex items-center justify-between">
@@ -71,11 +74,11 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
                   စုစုပေါင်း လက်ကျန်ငွေ
                 </span>
                 <span className="text-xs px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-xs font-medium">
-                  {accounts.length} အကောင့်
+                  {accounts.length} {language === 'en' ? (accounts.length === 1 ? 'account' : 'accounts') : 'အကောင့်'}
                 </span>
               </div>
               <div className="mt-3 flex items-baseline gap-2">
-                <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
                   {formatMMK(totalBalance, myanmarNumerals)}
                 </h2>
               </div>
@@ -105,7 +108,7 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
         </div>
 
         {/* This Month's Income Card */}
-        <div className="rounded-3xl bg-white dark:bg-slate-900 p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+        <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 p-3.5 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
               <span className="text-xs font-medium">ယခုလ ဝင်ငွေ</span>
@@ -114,7 +117,7 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
               </div>
             </div>
             <div className="mt-3">
-              <p className="text-2xl font-bold text-slate-900 dark:text-white">
+              <p className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">
                 +{formatMMK(monthIncome, myanmarNumerals)}
               </p>
             </div>
@@ -125,7 +128,7 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
         </div>
 
         {/* This Month's Expense & Savings Card */}
-        <div className="rounded-3xl bg-white dark:bg-slate-900 p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+        <div className="rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 p-3.5 sm:p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
               <span className="text-xs font-medium">ယခုလ အသုံးစရိတ်</span>
@@ -134,7 +137,7 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
               </div>
             </div>
             <div className="mt-3">
-              <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">
+              <p className="text-lg sm:text-2xl font-bold text-rose-600 dark:text-rose-400">
                 -{formatMMK(monthExpense, myanmarNumerals)}
               </p>
             </div>
@@ -182,7 +185,7 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2 sm:gap-3.5">
           {accounts.map((acc) => {
             const accBalance = balances[acc.id] ?? acc.initialBalance;
             const ratio = totalBalance > 0 ? Math.max(0, Math.min(100, Math.round((accBalance / totalBalance) * 100))) : 0;
@@ -191,7 +194,7 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
             return (
               <div
                 key={acc.id}
-                className="group relative rounded-2xl bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                className="group relative rounded-2xl bg-white dark:bg-slate-900 p-3 sm:p-4 border border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-start justify-between">
@@ -214,7 +217,7 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
 
                   <div className="mt-2.5">
                     <div
-                      className={`text-lg font-extrabold ${
+                      className={`text-sm sm:text-lg font-extrabold break-words ${
                         isNegative
                           ? 'text-rose-600 dark:text-rose-400'
                           : 'text-slate-900 dark:text-white'
@@ -259,5 +262,6 @@ export const AccountsSummary: React.FC<AccountsSummaryProps> = ({
         )}
       </div>
     </section>
+    </Localized>
   );
 };

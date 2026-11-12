@@ -2,11 +2,35 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+html,
+body {
+  background-color: #f5f8f6;
+}
+
+html.dark,
+html.dark body {
+  background-color: #020617;
+}
+
 @layer base {
   body {
     font-family: 'Pyidaungsu', 'Padauk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-width: 320px;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :where(button, a, input, select, textarea):focus-visible {
+    outline: 2px solid #10b981;
+    outline-offset: 2px;
   }
 }
 

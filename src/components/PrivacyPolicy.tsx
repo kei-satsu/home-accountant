@@ -1,5 +1,6 @@
-  import React, { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { Localized, useLanguage } from '../i18n';
 
 const sections = [
   {
@@ -49,24 +50,39 @@ const sections = [
 ];
 
 export const PrivacyPolicy: React.FC = () => {
+  const { language, setLanguage } = useLanguage();
+
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = 'Privacy Policy | Home Accountant';
+    document.title = language === 'en'
+      ? 'Privacy Policy | Home Accountant'
+      : 'ကိုယ်ရေးအချက်အလက် မူဝါဒ | Home Accountant';
     return () => {
       document.title = previousTitle;
     };
-  }, []);
+  }, [language]);
 
   return (
+    <Localized>
     <div className="min-h-screen bg-slate-50 px-4 py-8 text-slate-800 dark:bg-slate-950 dark:text-slate-200 sm:px-6 sm:py-12">
       <main className="mx-auto max-w-3xl">
-        <a
-          href="/"
-          className="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Home Accountant သို့ ပြန်သွားရန်
-        </a>
+        <div className="flex items-center justify-between gap-3">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Home Accountant သို့ ပြန်သွားရန်
+          </a>
+          <button
+            type="button"
+            onClick={() => setLanguage(language === 'my' ? 'en' : 'my')}
+            aria-label={language === 'my' ? 'ဘာသာစကားကို English သို့ ပြောင်းမည်' : 'Change language to Myanmar'}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            {language === 'my' ? 'EN' : 'မြန်မာ'}
+          </button>
+        </div>
 
         <article className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-9">
           <header className="border-b border-slate-200 pb-6 dark:border-slate-800">
@@ -109,5 +125,6 @@ export const PrivacyPolicy: React.FC = () => {
         </p>
       </main>
     </div>
+    </Localized>
   );
 };

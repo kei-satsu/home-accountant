@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Account } from '../types';
 import { formatMMK } from '../utils/ledger';
+import { Localized, useLanguage } from '../i18n';
 
 interface AccountManagerModalProps {
   isOpen: boolean;
@@ -60,6 +61,7 @@ export const AccountManagerModal: React.FC<AccountManagerModalProps> = ({
   onSaveAccount,
   onDeleteAccount,
 }) => {
+  const { language } = useLanguage();
   const [editingAccount, setEditingAccount] = useState<Partial<Account> | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -100,6 +102,7 @@ export const AccountManagerModal: React.FC<AccountManagerModalProps> = ({
   };
 
   return (
+    <Localized>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
@@ -301,7 +304,9 @@ export const AccountManagerModal: React.FC<AccountManagerModalProps> = ({
                         onClick={() => {
                           if (
                             window.confirm(
-                              `"${acc.name}" အကောင့်ကို ဖျက်ပစ်ရန် သေချာပါသလား?`
+                              language === 'en'
+                                ? `Delete account "${acc.name}"?`
+                                : `"${acc.name}" အကောင့်ကို ဖျက်ပစ်ရန် သေချာပါသလား?`
                             )
                           ) {
                             onDeleteAccount(acc.id);
@@ -321,5 +326,6 @@ export const AccountManagerModal: React.FC<AccountManagerModalProps> = ({
         </div>
       </div>
     </div>
+    </Localized>
   );
 };

@@ -38,6 +38,7 @@ import { AccountManagerModal } from './components/AccountManagerModal';
 import { GeminiApiKeyModal } from './components/GeminiApiKeyModal';
 import { getAccessToken } from './services/auth';
 import { uploadBackupToDrive } from './services/driveSync';
+import { Localized } from './i18n';
 
 const STORAGE_KEY = 'myanmar_household_ledger_v1';
 const GEMINI_API_KEY_STORAGE = `${STORAGE_KEY}_gemini_api_key`;
@@ -225,6 +226,12 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', darkMode ? '#020617' : '#f5f8f6');
+    document
+      .querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+      ?.setAttribute('content', darkMode ? 'black' : 'default');
     localStorage.setItem(`${STORAGE_KEY}_dark`, JSON.stringify(darkMode));
   }, [darkMode]);
 
@@ -443,7 +450,8 @@ export default function App() {
   }, [user, isDriveSyncReady, isOnline, driveSyncSnapshot, driveSyncRetry]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors flex flex-col font-sans pb-24 md:pb-12">
+    <Localized>
+    <div className="min-h-screen bg-[#f5f8f6] dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors flex flex-col font-sans pb-24 md:pb-12">
       {/* Top Navbar */}
       <Navbar
         darkMode={darkMode}
@@ -462,18 +470,7 @@ export default function App() {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 md:pb-12 space-y-6">
-        <section
-          aria-labelledby="app-purpose-title"
-          className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-900 dark:bg-emerald-950/30 sm:p-5"
-        >
-          <h2 id="app-purpose-title" className="text-base font-bold text-slate-900 dark:text-white">
-            Home Accountant
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">
-            Home Accountant is a personal financial management web app designed to track household expenses and sync records to Google Drive.
-          </p>
-        </section>
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-24 md:pb-12 space-y-4 sm:space-y-6">
         {!isOnline && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
             အင်တာနက်မရှိပါ။ သိမ်းထားပြီးသား UI နှင့် စာရင်းများကို ဆက်သုံးနိုင်ပါသည်။ AI နှင့် Google Drive ကို အင်တာနက်ပြန်ရမှ အသုံးပြုနိုင်ပါမည်။
@@ -495,14 +492,14 @@ export default function App() {
           </div>
         )}
         {/* Navigation Tabs (Dashboard, Graphs, Records) */}
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-          <div className="flex items-center gap-1 sm:gap-2">
+        <div className="hidden md:flex items-center justify-between">
+          <div className="flex items-center gap-1 rounded-2xl border border-slate-200/80 bg-white/80 p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${
                 activeTab === 'dashboard'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               <Home className="w-4 h-4" />
@@ -513,20 +510,20 @@ export default function App() {
               onClick={() => setActiveTab('charts')}
               className={`py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${
                 activeTab === 'charts'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               <BarChart3 className="w-4 h-4" />
-              <span>Graph</span>
+              <span>သုံးသပ်ချက်</span>
             </button>
 
             <button
               onClick={() => setActiveTab('records')}
               className={`py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${
                 activeTab === 'records'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               <List className="w-4 h-4" />
@@ -537,10 +534,10 @@ export default function App() {
 
         {/* Tab 1: Dashboard View */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-6">
+          <div className="flex flex-col gap-4 sm:gap-6">
             {/* Google Drive Not Connected Warning Notice */}
             {!user && !dismissDriveWarning && (
-              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-amber-950/40 border border-amber-200 dark:border-amber-800/70 p-3.5 sm:p-4 text-amber-950 dark:text-amber-100 shadow-xs">
+              <div className="order-2 relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-amber-950/40 border border-amber-200 dark:border-amber-800/70 p-3.5 sm:p-4 text-amber-950 dark:text-amber-100 shadow-xs">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 shrink-0 mt-0.5 shadow-xs">
@@ -552,7 +549,7 @@ export default function App() {
                           <span>သတိပြုရန် - Google Drive မချိတ်ဆက်ရသေးပါ</span>
                         </h3>
                       </div>
-                      <p className="text-xs text-amber-900/85 dark:text-amber-200/85 leading-relaxed max-w-3xl">
+                      <p className="hidden sm:block text-xs text-amber-900/85 dark:text-amber-200/85 leading-relaxed max-w-3xl">
                         လောလောဆယ် စာရင်းများကို သင့်ဖုန်း/စက်တွင်း၌သာ သိမ်းဆည်းထားပါသည်။ ဖုန်းပျောက်ခြင်း၊ စက်အသစ်လဲလှယ်ခြင်း (သို့မဟုတ်) Browser ဒေတာများ ရှင်းလင်း (Clear Cache) မိပါက စာရင်းများ ပျောက်ဆုံးသွားနိုင်သဖြင့် Google Drive တွင် Backup ချိတ်ဆက်ထားရန် အကြံပြုအပ်ပါသည်။
                       </p>
                       <div className="pt-2 flex flex-wrap items-center gap-2">
@@ -585,7 +582,7 @@ export default function App() {
             )}
 
             {showGettingStarted && (
-              <section className="rounded-2xl border border-sky-200 dark:border-sky-900 bg-sky-50/80 dark:bg-sky-950/30 p-4 sm:p-5 space-y-4">
+              <section className="order-3 rounded-2xl border border-sky-200 dark:border-sky-900 bg-sky-50/80 dark:bg-sky-950/30 p-4 sm:p-5 space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
                     <div className="rounded-xl bg-sky-100 dark:bg-sky-900/60 p-2 text-sky-700 dark:text-sky-300">
@@ -680,20 +677,22 @@ export default function App() {
             )}
 
             {/* Accounts & Wealth Glance */}
-            <AccountsSummary
-              accounts={accounts}
-              balances={balances}
-              totalBalance={totalBalance}
-              monthIncome={totalIncome}
-              monthExpense={totalExpense}
-              myanmarNumerals={myanmarNumerals}
-              onOpenAddModal={handleOpenAddModal}
-              onOpenTransferModal={handleOpenTransferModal}
-              onOpenManageAccounts={() => setIsAccountManagerOpen(true)}
-            />
+            <div className="order-1">
+              <AccountsSummary
+                accounts={accounts}
+                balances={balances}
+                totalBalance={totalBalance}
+                monthIncome={totalIncome}
+                monthExpense={totalExpense}
+                myanmarNumerals={myanmarNumerals}
+                onOpenAddModal={handleOpenAddModal}
+                onOpenTransferModal={handleOpenTransferModal}
+                onOpenManageAccounts={() => setIsAccountManagerOpen(true)}
+              />
+            </div>
 
             {/* Quick Chart Preview & Recent Transactions 2-column Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="order-4 hidden md:grid grid-cols-1 lg:grid-cols-2 gap-6">
               <LedgerCharts
                 transactions={transactions}
                 categories={categories}
@@ -763,7 +762,7 @@ export default function App() {
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-3 py-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-xl">
+      <nav aria-label="Үндсэн навигаци" className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-3 py-1.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-xl">
         <button
           onClick={() => setActiveTab('dashboard')}
           className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2 rounded-lg transition-colors cursor-pointer ${
@@ -781,7 +780,7 @@ export default function App() {
           }`}
         >
           <BarChart3 className="w-5 h-5" />
-          <span>Graph</span>
+          <span>သုံးသပ်ချက်</span>
         </button>
 
         {/* Center Quick Add Button */}
@@ -822,7 +821,7 @@ export default function App() {
           </div>
           <span>Sync</span>
         </button>
-      </div>
+      </nav>
 
       {/* Modals */}
       <AiVoiceModal
@@ -888,5 +887,6 @@ export default function App() {
         onDeleteAccount={handleDeleteAccount}
       />
     </div>
+    </Localized>
   );
 }

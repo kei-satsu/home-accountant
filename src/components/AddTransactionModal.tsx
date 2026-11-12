@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
   X,
-  Plus,
+  ChevronDown,
+  ChevronUp,
   ArrowRightLeft,
+  TrendingDown,
+  TrendingUp,
   Check,
-  Calendar,
   Wallet,
-  Tag,
   AlertCircle,
 } from 'lucide-react';
 import { Account, Category, Transaction, TransactionType } from '../types';
 import { formatMMK } from '../utils/ledger';
+import { Localized, useLanguage } from '../i18n';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -35,6 +37,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   initialType = 'expense',
   onSave,
 }) => {
+  const { t } = useLanguage();
   const [type, setType] = useState<TransactionType>(initialType);
   const [amountStr, setAmountStr] = useState<string>('');
   const [fromAccountId, setFromAccountId] = useState<string>('');
@@ -70,31 +73,49 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   };
 
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+
+    event.preventDefault();
+    const tabs: TransactionType[] = ['expense', 'income', 'transfer'];
+    const direction = event.key === 'ArrowRight' ? 1 : -1;
+    const nextIndex = (tabs.indexOf(type) + direction + tabs.length) % tabs.length;
+    const nextType = tabs[nextIndex];
+    handleTypeChange(nextType);
+    document.getElementById(`transaction-tab-${nextType}`)?.focus();
+  };
+
   const handleQuickAdd = (value: number) => {
     const current = parseInt(amountStr.replace(/,/g, ''), 10) || 0;
     setAmountStr(String(current + value));
+  };
+
+  const handleStepAmount = (step: number) => {
+    const current = parseInt(amountStr.replace(/,/g, ''), 10) || 0;
+    const nextAmount = Math.max(0, current + step);
+    setAmountStr(nextAmount ? String(nextAmount) : '');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseInt(amountStr.replace(/,/g, ''), 10);
     if (!amount || amount <= 0) {
-      setErrorMsg('ကျေးဇူးပြု၍ မှန်ကန်သော ငွေပမာဏ ရိုက်ထည့်ပါ');
+      setErrorMsg(t('ကျေးဇူးပြု၍ မှန်ကန်သော ငွေပမာဏ ရိုက်ထည့်ပါ'));
       return;
     }
 
     if (!fromAccountId) {
-      setErrorMsg('ကျေးဇူးပြု၍ အကောင့် ရွေးချယ်ပါ');
+      setErrorMsg(t('ကျေးဇူးပြု၍ အကောင့် ရွေးချယ်ပါ'));
       return;
     }
 
     if (type === 'transfer') {
       if (!toAccountId) {
-        setErrorMsg('လွှဲပြောင်းလက်ခံမည့် အကောင့် ရွေးချယ်ပါ');
+        setErrorMsg(t('လွှဲပြောင်းလက်ခံမည့် အကောင့် ရွေးချယ်ပါ'));
         return;
       }
       if (fromAccountId === toAccountId) {
-        setErrorMsg('မူရင်းအကောင့်နှင့် လွှဲမည့်အကောင့် မတူညီရပါ');
+        setErrorMsg(t('မူရင်းအကောင့်နှင့် လွှဲမည့်အကောင့် မတူညီရပါ'));
         return;
       }
     }
@@ -119,80 +140,198 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const filteredCategories = categories.filter((c) => c.type === (type === 'income' ? 'income' : 'expense'));
   const currentAmountNum = parseInt(amountStr.replace(/,/g, ''), 10) || 0;
+  const expenseLabel = 'အသုံးစရိတ် (အထွက်)';
+  const incomeLabel = 'ဝင်ငွေ (အဝင်)';
+  const transferLabel = 'ငွေလွှဲ (အကောင့်ချင်း)';
+  const selectedTypeLabel = type === 'expense'
+    ? expenseLabel
+    : type === 'income'
+    ? incomeLabel
+    : transferLabel;
+  const fromAccountLabel = type === 'transfer'
+    ? 'လွှဲထုတ်မည့် အကောင့်:'
+    : type === 'income'
+    ? 'ထည့်သွင်းမည့် အကောင့်:'
+    : 'နှုတ်ယူမည့် အကောင့်:';
+
+  const renderAccountOptions = (
+    availableAccounts: Account[],
+    selectedAccountId: string,
+    onSelectAccount: (accountId: string) => void,
+    label: string,
+    emptyMessage = 'အကောင့် မရှိသေးပါ'
+  ) => (
+    <div
+      role="group"
+      aria-label={t(label)}
+      className="flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain pb-2"
+    >
+      {availableAccounts.length > 0 ? (
+        availableAccounts.map((account) => {
+          const isSelected = selectedAccountId === account.id;
+          return (
+            <button
+              key={account.id}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => onSelectAccount(account.id)}
+              className={`flex min-w-[148px] shrink-0 items-center gap-2 rounded-xl border p-3 text-left transition-colors ${
+                isSelected
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-200'
+                  : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+              }`}
+            >
+              <Wallet className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span className="min-w-0">
+                <span className="block truncate text-xs font-semibold">{account.name}</span>
+                <span className="block truncate text-[10px] text-slate-500 dark:text-slate-400">
+                  {formatMMK(balances[account.id] ?? account.initialBalance, myanmarNumerals)}
+                </span>
+              </span>
+            </button>
+          );
+        })
+      ) : (
+        <span className="py-2 text-xs text-slate-500 dark:text-slate-400">
+          {t(emptyMessage)}
+        </span>
+      )}
+    </div>
+  );
 
   return (
+    <Localized>
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Modal Header */}
-        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
-            {type === 'transfer' ? 'အကောင့်ချင်း ငွေလွှဲခြင်း' : 'စာရင်း အသစ်သွင်းခြင်း'}
-          </h3>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
-          {/* Segmented Control: Expense, Income, Transfer */}
-          <div className="grid grid-cols-3 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-center">
+      <div className="relative flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-b border-slate-200 px-4 pt-4 dark:border-slate-800 sm:px-6 sm:pt-5">
+          <div className="flex items-center justify-between gap-3 pb-4">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
+                {selectedTypeLabel}
+              </h3>
+            </div>
             <button
               type="button"
-              onClick={() => handleTypeChange('expense')}
-              className={`py-2 rounded-xl transition-all ${
-                type === 'expense'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              onClick={onClose}
+              aria-label="Close"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-200"
             >
-              အသုံးစရိတ် (အထွက်)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTypeChange('income')}
-              className={`py-2 rounded-xl transition-all ${
-                type === 'income'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              ဝင်ငွေ (အဝင်)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleTypeChange('transfer')}
-              className={`py-2 rounded-xl transition-all ${
-                type === 'transfer'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              ငွေလွှဲ (အကောင့်ချင်း)
+              <X className="h-5 w-5" />
             </button>
           </div>
 
+          <div
+            role="tablist"
+            aria-label="စာရင်းအမျိုးအစား"
+            className="grid grid-cols-3 gap-2"
+          >
+            <button
+              type="button"
+              role="tab"
+              id="transaction-tab-expense"
+              aria-controls="transaction-panel"
+              aria-selected={type === 'expense'}
+              aria-label={expenseLabel}
+              title={expenseLabel}
+              tabIndex={type === 'expense' ? 0 : -1}
+              onClick={() => handleTypeChange('expense')}
+              onKeyDown={handleTabKeyDown}
+              className={`flex min-h-[52px] items-center justify-center rounded-t-xl px-1.5 py-2 transition-colors ${
+                type === 'expense'
+                  ? 'border-b-2 border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
+                  : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/60'
+              }`}
+            >
+              <TrendingDown className="h-[18px] w-[18px] shrink-0" />
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="transaction-tab-income"
+              aria-controls="transaction-panel"
+              aria-selected={type === 'income'}
+              aria-label={incomeLabel}
+              title={incomeLabel}
+              tabIndex={type === 'income' ? 0 : -1}
+              onClick={() => handleTypeChange('income')}
+              onKeyDown={handleTabKeyDown}
+              className={`flex min-h-[52px] items-center justify-center rounded-t-xl px-1.5 py-2 transition-colors ${
+                type === 'income'
+                  ? 'border-b-2 border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                  : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/60'
+              }`}
+            >
+              <TrendingUp className="h-[18px] w-[18px] shrink-0" />
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="transaction-tab-transfer"
+              aria-controls="transaction-panel"
+              aria-selected={type === 'transfer'}
+              aria-label={transferLabel}
+              title={transferLabel}
+              tabIndex={type === 'transfer' ? 0 : -1}
+              onClick={() => handleTypeChange('transfer')}
+              onKeyDown={handleTabKeyDown}
+              className={`flex min-h-[52px] items-center justify-center rounded-t-xl px-1.5 py-2 transition-colors ${
+                type === 'transfer'
+                  ? 'border-b-2 border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                  : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/60'
+              }`}
+            >
+              <ArrowRightLeft className="h-[18px] w-[18px] shrink-0" />
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Form */}
+        <form
+          id="transaction-panel"
+          role="tabpanel"
+          aria-labelledby={`transaction-tab-${type}`}
+          onSubmit={handleSubmit}
+          className="space-y-5 overflow-y-auto p-4 sm:p-6"
+        >
           {/* Amount Input */}
-          <div>
-            <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+          <div className="space-y-2">
+            <label htmlFor="transaction-amount" className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
               ငွေပမာဏ (ကျပ်)
             </label>
-            <div className="relative">
-              <input
-                type="number"
-                value={amountStr}
-                onChange={(e) => setAmountStr(e.target.value)}
-                placeholder="0"
-                autoFocus
-                className="w-full py-3 px-4 rounded-xl text-2xl font-bold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-              />
-              <span className="absolute right-4 top-4 text-xs font-semibold text-slate-400">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 transition-colors focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800">
+              <span className="shrink-0 rounded-xl bg-white px-2.5 py-2 text-xs font-bold text-slate-500 dark:bg-slate-900 dark:text-slate-400">
                 MMK
               </span>
+              <input
+                id="transaction-amount"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={amountStr}
+                onChange={(e) => setAmountStr(e.target.value.replace(/\D/g, ''))}
+                placeholder="0"
+                className="min-w-0 flex-1 appearance-none bg-transparent px-1 py-2 text-xl font-bold text-slate-900 outline-hidden placeholder:text-slate-300 dark:text-white dark:placeholder:text-slate-600 sm:text-2xl"
+              />
+              <div className="flex shrink-0 flex-col gap-1 border-l border-slate-200 pl-2 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => handleStepAmount(1000)}
+                  aria-label={t('ငွေပမာဏ ၁၀၀၀ ကျပ် တိုးရန်')}
+                  title={t('ငွေပမာဏ ၁၀၀၀ ကျပ် တိုးရန်')}
+                  className="flex h-8 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-emerald-600 dark:hover:bg-slate-700 dark:hover:text-emerald-400"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleStepAmount(-1000)}
+                  aria-label={t('ငွေပမာဏ ၁၀၀၀ ကျပ် လျှော့ရန်')}
+                  title={t('ငွေပမာဏ ၁၀၀၀ ကျပ် လျှော့ရန်')}
+                  className="flex h-8 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white hover:text-rose-600 dark:hover:bg-slate-700 dark:hover:text-rose-400"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             {currentAmountNum > 0 && (
               <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
@@ -201,13 +340,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             )}
 
             {/* Quick Amount Buttons */}
-            <div className="flex flex-wrap gap-1.5 mt-2">
+            <div className="grid grid-cols-3 gap-2 pt-1">
               {[1000, 5000, 10000, 50000, 100000].map((val) => (
                 <button
                   key={val}
                   type="button"
                   onClick={() => handleQuickAdd(val)}
-                  className="py-1 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-[11px] font-semibold text-slate-700 dark:text-slate-300 transition-colors"
+                  className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-[10px] font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/30 sm:text-xs"
                 >
                   +{formatMMK(val, myanmarNumerals)}
                 </button>
@@ -215,88 +354,50 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <button
                 type="button"
                 onClick={() => setAmountStr('')}
-                className="py-1 px-2.5 rounded-lg bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-[11px] font-semibold text-slate-500 hover:text-rose-600 transition-colors"
+                className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-2 py-2 text-[10px] font-semibold text-slate-500 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-rose-950/40 sm:text-xs"
               >
-                Clear
+                ပမာဏ ရှင်းရန်
               </button>
             </div>
           </div>
 
           {/* Account Selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* From Account */}
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                {type === 'transfer'
-                  ? 'လွှဲထုတ်မည့် အကောင့်:'
-                  : type === 'income'
-                  ? 'ထည့်သွင်းမည့် အကောင့်:'
-                  : 'နှုတ်ယူမည့် အကောင့်:'}
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+                {fromAccountLabel}
               </label>
-              <select
-                value={fromAccountId}
-                onChange={(e) => setFromAccountId(e.target.value)}
-                className="w-full py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
-              >
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({formatMMK(balances[a.id] ?? a.initialBalance, myanmarNumerals)})
-                  </option>
-                ))}
-              </select>
+              {renderAccountOptions(accounts, fromAccountId, setFromAccountId, fromAccountLabel)}
             </div>
 
-            {/* To Account (only for transfer) */}
-            {type === 'transfer' ? (
-              <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+            {type === 'transfer' && (
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
                   လွှဲလက်ခံမည့် အကောင့်:
                 </label>
-                <select
-                  value={toAccountId}
-                  onChange={(e) => setToAccountId(e.target.value)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-semibold text-slate-900 dark:text-white"
-                >
-                  <option value="">အကောင့် ရွေးချယ်ပါ</option>
-                  {accounts
-                    .filter((a) => a.id !== fromAccountId)
-                    .map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} ({formatMMK(balances[a.id] ?? a.initialBalance, myanmarNumerals)})
-                      </option>
-                    ))}
-                </select>
-              </div>
-            ) : (
-              /* Date Picker */
-              <div>
-                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
-                  ရက်စွဲ
-                </label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-full py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
-                />
+                {renderAccountOptions(
+                  accounts.filter((account) => account.id !== fromAccountId),
+                  toAccountId,
+                  setToAccountId,
+                  'လွှဲလက်ခံမည့် အကောင့်:',
+                  'လွှဲရန် အခြားအကောင့် ထည့်ပါ'
+                )}
               </div>
             )}
-          </div>
 
-          {/* Transfer Date picker if transfer */}
-          {type === 'transfer' && (
-            <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">
+            <div className="space-y-1 sm:max-w-xs">
+              <label htmlFor="transaction-date" className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
                 ရက်စွဲ
               </label>
               <input
+                id="transaction-date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full py-2.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
               />
             </div>
-          )}
+          </div>
 
           {/* Category Chips (if not transfer) */}
           {type !== 'transfer' && (
@@ -304,25 +405,31 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1.5">
                 အမျိုးအစား (Category) ရွေးချယ်ပါ
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div
+                role="group"
+                aria-label={t('အမျိုးအစား')}
+                className="flex touch-pan-x gap-2 overflow-x-auto overscroll-x-contain pb-2"
+              >
                 {filteredCategories.map((c) => {
                   const isSelected = categoryId === c.id;
                   return (
                     <button
                       key={c.id}
                       type="button"
+                      title={c.name}
+                      aria-pressed={isSelected}
                       onClick={() => setCategoryId(c.id)}
-                      className={`py-2 px-2.5 rounded-xl text-xs font-medium text-left flex items-center gap-1.5 border transition-all ${
+                      className={`flex min-h-11 min-w-[144px] max-w-[180px] shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-medium transition-colors ${
                         isSelected
-                          ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 ring-2 ring-emerald-500/20 font-bold'
-                          : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+                          ? 'border-emerald-500 bg-emerald-50 font-bold text-emerald-800 dark:border-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-200'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
                       <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ backgroundColor: c.color }}
                       />
-                      <span className="truncate">{c.name}</span>
+                      <span className="min-w-0 truncate">{c.name}</span>
                     </button>
                   );
                 })}
@@ -364,5 +471,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </form>
       </div>
     </div>
+    </Localized>
   );
 };
