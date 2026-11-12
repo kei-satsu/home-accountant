@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+  import React, { useEffect } from 'react';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 
 const sections = [
