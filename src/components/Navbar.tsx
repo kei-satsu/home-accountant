@@ -90,12 +90,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center justify-between h-14 sm:h-20 gap-2">
           {/* Logo & Brand Title */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
-              <span className="text-base sm:text-xl font-bold font-serif">စ</span>
-            </div>
+            <img
+              src="/icons/icon.svg"
+              alt="Home Accountant logo"
+              className="h-8 w-8 shrink-0 rounded-xl shadow-md shadow-emerald-500/20 sm:h-11 sm:w-11 sm:rounded-2xl"
+            />
             <div className="flex items-center gap-1.5 shrink-0">
               <h1 className="text-lg sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
-                အိမ်စရင်း
+                Home Accountant
               </h1>
               {hasGeminiApiKey && (
                 <span className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 whitespace-nowrap">

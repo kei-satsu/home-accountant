@@ -5,22 +5,23 @@ const sections = [
   {
     title: '၁။ ကျွန်ုပ်တို့ စုဆောင်း/အသုံးပြုသည့် အချက်အလက်များ',
     paragraphs: [
-      'အိမ်စရင်းသည် သင့်အိမ်ထောင်စု၏ ငွေစာရင်းကို ကိုယ်တိုင်မှတ်တမ်းတင်ရန် ပြုလုပ်ထားသော app ဖြစ်ပါသည်။ သင်ထည့်သွင်းသော အကောင့်အမည်နှင့် လက်ကျန်ငွေ၊ ဝင်ငွေ/အသုံးစရိတ်၊ ပမာဏ၊ အမျိုးအစား၊ ရက်စွဲ၊ မှတ်စုနှင့် အသံမှတ်တမ်းမှ ရရှိသော စာသားတို့ ပါဝင်နိုင်ပါသည်။',
-      'Google Drive backup ကို ချိတ်ဆက်အသုံးပြုပါက Google မှ အတည်ပြုသည့် အကောင့်အမည်၊ အီးမေးလ်နှင့် ပရိုဖိုင်အချက်အလက်အချို့ကို ပြသနိုင်ပါသည်။ သင်ပေးသော Gemini API key ကို browser ၏ local storage တွင် သိမ်းဆည်းပါသည်။',
+      'Home Accountant is a personal financial management web app for tracking household expenses and syncing records to your own Google Drive. သင်ထည့်သွင်းသော အကောင့်အမည်နှင့် လက်ကျန်ငွေ၊ ဝင်ငွေ/အသုံးစရိတ်၊ ပမာဏ၊ အမျိုးအစား၊ ရက်စွဲ၊ မှတ်စုနှင့် အသံမှတ်တမ်းမှ ရရှိသော စာသားတို့ကို စက်တွင်း browser storage တွင် သိမ်းဆည်းပါသည်။',
+      'Google sign-in ပြုလုပ်သည့်အခါ သင့် Google အီးမေးလ်လိပ်စာ၊ Google account user ID၊ အမည်နှင့် profile photo URL အပါအဝင် Google မှ ပေးပို့သော profile အချက်အလက်များကို authentication နှင့် ချိတ်ဆက်ထားသော Drive account ကို ပြသရန် လက်ခံရရှိပါသည်။ Google Drive အသုံးပြုမှုကို သင်ခွင့်ပြုပါက `drive.file` scope အရ app ဖန်တီးထားသော သို့မဟုတ် app ဖြင့်ဖွင့်ထားသော Drive ဖိုင်များကိုသာ ဝင်ရောက်အသုံးပြုပါသည်။ သင်ထည့်သော Gemini API key ကို browser ၏ local storage တွင် သိမ်းဆည်းပါသည်။',
     ],
   },
   {
     title: '၂။ ဒေတာသိမ်းဆည်းရာနေရာ',
     paragraphs: [
       'သင့်စာရင်းဒေတာနှင့် ဆက်တင်များကို ပုံမှန်အားဖြင့် သင်အသုံးပြုနေသော browser/device ၏ local storage တွင် သိမ်းဆည်းပါသည်။ App သည် ဤဒေတာများကို ကျွန်ုပ်တို့၏ app server တွင် အကောင့်အဖြစ် စုဆောင်းသိမ်းဆည်းရန် မရည်ရွယ်ပါ။ Browser ဒေတာရှင်းလင်းခြင်း သို့မဟုတ် device ပျောက်ဆုံးခြင်းကြောင့် local copy ပျောက်နိုင်ပါသည်။',
-      'Google Drive sync ကို သင်ကိုယ်တိုင်ချိတ်ဆက်ပါက စာရင်းဒေတာများကို Google Drive ရှိ သီးသန့် backup ဖိုင်သို့ တင်ပို့ပါသည်။ ပုံမှန်အလိုအလျောက် sync တွင် Gemini API key မပါဝင်ပါ။ Key ပါဝင်သော backup ကို Drive သို့ သိမ်းလိုပါက key ပါဝင်ကြောင်းသိရှိပြီး ကိုယ်တိုင်သိမ်းဆည်းမှုကို အတည်ပြုရပါမည်။ ထို Drive backup သည် end-to-end encrypted မဟုတ်ပါ။',
+      'Google Drive ခွင့်ပြုချက်သည် သင့်ကိုယ်ပိုင် Google Drive ထဲရှိ Home Accountant backup ဖိုင်ကို ရှာဖွေ၊ ဖတ်ရှု၊ ဖန်တီးနှင့် အပ်ဒိတ်လုပ်ရန်သာ လိုအပ်ပါသည်။ ဤခွင့်ပြုချက်ကို အခြားရည်ရွယ်ချက်အတွက် အသုံးမပြုပါ။ ပုံမှန်အလိုအလျောက် sync တွင် Gemini API key မပါဝင်ပါ။ Key ပါဝင်သော backup ကို Drive သို့ သိမ်းလိုပါက key ပါဝင်ကြောင်း သိရှိပြီး ကိုယ်တိုင်သိမ်းဆည်းမှုကို အတည်ပြုရပါမည်။ ထို Drive backup သည် end-to-end encrypted မဟုတ်ပါ။',
     ],
   },
   {
     title: '၃။ ပြင်ပဝန်ဆောင်မှုများနှင့် ဒေတာမျှဝေမှု',
     paragraphs: [
-      'Google Drive ကို ချိတ်ဆက်သည့်အခါ Google/Firebase authentication နှင့် Google Drive API ကို အသုံးပြု၍ ဝင်ရောက်ခွင့်ပြုထားသော backup ဖိုင်ကို ရှာဖွေ၊ ဖတ်ရှု သို့မဟုတ် သိမ်းဆည်းပါသည်။ Google သည် ၎င်း၏ ကိုယ်ပိုင် privacy policy နှင့် စည်းကမ်းချက်များအတိုင်း ဒေတာကို စီမံဆောင်ရွက်ပါသည်။',
+      'Home Accountant သည် သင့်ဒေတာကို မည်သူ့ထံမျှ မရောင်းချပါ၊ ကြော်ငြာ သို့မဟုတ် marketing အတွက် ပြင်ပအဖွဲ့အစည်းများနှင့် မျှဝေခြင်းမပြုပါ။ Google/Firebase သို့ အီးမေးလ်နှင့် profile အချက်အလက်များကို sign-in ဝန်ဆောင်မှုပေးရန် ပေးပို့ပြီး၊ Google Drive သို့ သင်ရွေးချယ်ထားသော backup/sync ကို လုပ်ဆောင်ရန် စာရင်းဒေတာများကို ပေးပို့ပါသည်။ Google က ၎င်း၏ ကိုယ်ပိုင် privacy policy နှင့် စည်းကမ်းချက်များအတိုင်း ထိုဒေတာများကို စီမံဆောင်ရွက်ပါသည်။',
       'AI ဖြင့်စာရင်းခွဲခြမ်းစိတ်ဖြာရာတွင် သင်ရိုက်ထည့်/အသံမှရရှိသော စာသားနှင့် အကောင့်၊ အမျိုးအစားဆိုင်ရာ အချက်အလက်များကို app server သို့ ပို့ပါသည်။ Gemini ကို အသုံးပြုနိုင်သည့်အခါ စာသားနှင့် အကောင့်/အမျိုးအစား ID၊ အမည်နှင့် အမျိုးအစားတို့ကို Google Gemini သို့ ဆက်လက်ပို့ပြီး ခွဲခြမ်းစိတ်ဖြာမှုရလဒ်ကို ပြန်လည်ရယူပါသည်။ Gemini မသုံးနိုင်ပါက server ပေါ်ရှိ စည်းမျဉ်းအခြေပြု parser ဖြင့် စီမံနိုင်ပါသည်။ သင့်ကိုယ်ပိုင် API key သုံးပါက တောင်းဆိုမှုကို ဆောင်ရွက်ရန် server က ထို key ဖြင့် Gemini ကို ခေါ်ဆိုပါသည်။ App server တွင် key ကို သိမ်းဆည်းရန် မရည်ရွယ်ပါ။',
+      'ဤလုပ်ဆောင်ချက်များကို ပေးဆောင်ရန် шаардသည့် ဝန်ဆောင်မှုပေးသူများအပြင် အခြားပြင်ပအဖွဲ့အစည်းများထံ သင့်ဒေတာကို ရောင်းချခြင်း၊ ပေးအပ်ခြင်း သို့မဟုတ် လွှဲပြောင်းခြင်း မပြုပါ။ Google Drive သို့မဟုတ် Gemini ကို အသုံးပြုရန် သင်ရွေးချယ်ပါက သက်ဆိုင်ရာအချက်အလက်များကို Google ထံ ပေးပို့ရခြင်းဖြစ်ပြီး Google သည် သီးခြားဝန်ဆောင်မှုပေးသူအဖြစ် ဒေတာကို ၎င်း၏ စည်းကမ်းချက်များအတိုင်း ကိုင်တွယ်ပါသည်။',
       'အသံထည့်သွင်းမှုအတွက် browser/device ၏ Speech Recognition ဝန်ဆောင်မှုကို အသုံးပြုနိုင်ပါသည်။ အသံကို မည်သို့စီမံမည်ဆိုသည်မှာ browser/device ဝန်ဆောင်မှုပေးသူ၏ စည်းကမ်းချက်ပေါ် မူတည်ပါသည်။ အသံမသုံးဘဲ စာရိုက်ထည့်နိုင်ပါသည်။',
       'App ကို လက်ခံထားသော hosting/server ဝန်ဆောင်မှုကလည်း တောင်းဆိုမှုများကို လုပ်ဆောင်ရန် လိုအပ်သည့် နည်းပညာဆိုင်ရာ အချက်အလက်များကို ကိုင်တွယ်နိုင်ပါသည်။ ထိုဝန်ဆောင်မှုများ၏ ကိုယ်ပိုင် privacy စည်းကမ်းချက်များလည်း သက်ဆိုင်နိုင်ပါသည်။',
     ],
@@ -50,7 +51,7 @@ const sections = [
 export const PrivacyPolicy: React.FC = () => {
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = 'ကိုယ်ရေးအချက်အလက် မူဝါဒ | အိမ်စရင်း';
+    document.title = 'Privacy Policy | Home Accountant';
     return () => {
       document.title = previousTitle;
     };
@@ -64,7 +65,7 @@ export const PrivacyPolicy: React.FC = () => {
           className="inline-flex items-center gap-2 rounded-lg text-sm font-semibold text-emerald-700 hover:text-emerald-800 dark:text-emerald-400 dark:hover:text-emerald-300"
         >
           <ArrowLeft className="h-4 w-4" />
-          အိမ်စရင်းသို့ ပြန်သွားရန်
+          Home Accountant သို့ ပြန်သွားရန်
         </a>
 
         <article className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-9">
@@ -74,19 +75,17 @@ export const PrivacyPolicy: React.FC = () => {
                 <ShieldCheck className="h-6 w-6" />
               </span>
               <div>
-                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">အိမ်စရင်း</p>
+                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Home Accountant</p>
                 <h1 className="text-2xl font-black text-slate-950 dark:text-white sm:text-3xl">
                   ကိုယ်ရေးအချက်အလက် မူဝါဒ
                 </h1>
               </div>
             </div>
             <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-400">
-              နောက်ဆုံးပြင်ဆင်သည့်ရက် — ၂၀၂၆ ခုနှစ်၊ နိုဝင်ဘာလ ၁၁ ရက်
+              နောက်ဆုံးပြင်ဆင်သည့်ရက် — ၂၀၂၆ ခုနှစ်၊ နိုဝင်ဘာလ ၁၂ ရက်
             </p>
             <p className="mt-3 text-sm leading-7 text-slate-700 dark:text-slate-300">
-              ဤမူဝါဒတွင် အိမ်စရင်း (Myanmar Home Ledger) ကို အသုံးပြုသည့်အခါ
-              အချက်အလက်များကို မည်သို့သိမ်းဆည်း၊ အသုံးပြု၊ မျှဝေသည်ကို ရှင်းပြထားပါသည်။
-              Drive နှင့် AI လုပ်ဆောင်ချက်များသည် သင်ရွေးချယ်အသုံးပြုမှသာ လုပ်ဆောင်ပါသည်။
+              ဤမူဝါဒတွင် Home Accountant ကို အသုံးပြုသည့်အခါ အချက်အလက်များကို မည်သို့သိမ်းဆည်း၊ အသုံးပြု၊ မျှဝေသည်ကို ရှင်းပြထားပါသည်။ Drive နှင့် AI လုပ်ဆောင်ချက်များသည် သင်ရွေးချယ်အသုံးပြုမှသာ လုပ်ဆောင်ပါသည်။
             </p>
           </header>
 
@@ -106,7 +105,7 @@ export const PrivacyPolicy: React.FC = () => {
           </div>
         </article>
         <p className="py-6 text-center text-xs text-slate-500 dark:text-slate-500">
-          အိမ်စရင်း (Myanmar Home Ledger)
+          Home Accountant
         </p>
       </main>
     </div>

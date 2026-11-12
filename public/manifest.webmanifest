@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "အိမ်စရင်း (Myanmar Home Ledger)",
-  "short_name": "အိမ်စရင်း",
-  "description": "မြန်မာအိမ်သုံး ဝင်ငွေ၊ အသုံးစရိတ် စာရင်း",
+  "name": "Home Accountant",
+  "short_name": "Home Accountant",
+  "description": "Personal financial management for tracking household expenses and syncing records to Google Drive.",
   "lang": "my",
   "start_url": "/",
   "scope": "/",

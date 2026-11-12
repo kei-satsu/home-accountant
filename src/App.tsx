@@ -463,6 +463,17 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 md:pb-12 space-y-6">
+        <section
+          aria-labelledby="app-purpose-title"
+          className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 dark:border-emerald-900 dark:bg-emerald-950/30 sm:p-5"
+        >
+          <h2 id="app-purpose-title" className="text-base font-bold text-slate-900 dark:text-white">
+            Home Accountant
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-slate-700 dark:text-slate-300">
+            Home Accountant is a personal financial management web app designed to track household expenses and sync records to Google Drive.
+          </p>
+        </section>
         {!isOnline && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
             အင်တာနက်မရှိပါ။ သိမ်းထားပြီးသား UI နှင့် စာရင်းများကို ဆက်သုံးနိုင်ပါသည်။ AI နှင့် Google Drive ကို အင်တာနက်ပြန်ရမှ အသုံးပြုနိုင်ပါမည်။
@@ -727,9 +738,12 @@ export default function App() {
         )}
       </main>
 
-      <footer className="border-t border-slate-200 px-4 py-4 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        <a href="/privacy-policy" className="font-semibold hover:text-emerald-700 dark:hover:text-emerald-400">
-          ကိုယ်ရေးအချက်အလက် မူဝါဒ
+      <footer className="border-t border-slate-200 px-4 py-5 text-center text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
+        <p className="mx-auto max-w-4xl leading-relaxed">
+          Home Accountant complies with the Google API Services User Data Policy. This application is strictly for financial and ledger tracking and does not use Google APIs to create, process, or distribute AI NCII (AI-generated Non-Consensual Intimate Imagery) or illegal content.
+        </p>
+        <a href="/privacy-policy" className="mt-3 inline-block font-semibold hover:text-emerald-700 dark:hover:text-emerald-400">
+          Privacy Policy (ကိုယ်ရေးအချက်အလက် မူဝါဒ)
         </a>
       </footer>
 
