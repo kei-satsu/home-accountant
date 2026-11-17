@@ -43,8 +43,8 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
 
   return (
     <Localized>
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+      <div className="drawer-panel drawer-enter relative flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl rounded-b-none border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:rounded-3xl">
         <div className="flex items-center justify-between bg-gradient-to-r from-violet-600 to-indigo-600 p-5 text-white">
           <div className="flex items-center gap-3">
             <KeyRound className="h-5 w-5" />
@@ -58,7 +58,7 @@ export const GeminiApiKeyModal: React.FC<GeminiApiKeyModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 p-5">
+        <form onSubmit={handleSubmit} className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
           <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
             API key ကို server တွင် မသိမ်းပါ။ Gemini သို့ စာရင်းစာသားခွဲခြမ်းစိတ်ဖြာရန်သာ ပို့ပြီး၊ မသိမ်းထားလျှင် စည်းမျဉ်းအခြေပြု parser ကို သုံးပါမည်။
           </p>

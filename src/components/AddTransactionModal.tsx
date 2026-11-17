@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   ChevronDown,
@@ -13,6 +13,7 @@ import {
 import { Account, Category, Transaction, TransactionType } from '../types';
 import { formatMMK } from '../utils/ledger';
 import { Localized, useLanguage } from '../i18n';
+import { CategoryManagerModal } from './CategoryManagerModal';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -23,7 +24,11 @@ interface AddTransactionModalProps {
   myanmarNumerals: boolean;
   defaultAccountId?: string;
   initialType?: TransactionType;
+  initialTransaction?: Transaction;
   onSave: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  onManageAccounts: () => void;
+  onSaveCategory: (category: Category) => void;
+  onDeleteCategory: (id: string) => void;
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
@@ -35,9 +40,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   myanmarNumerals,
   defaultAccountId,
   initialType = 'expense',
+  initialTransaction,
   onSave,
+  onManageAccounts,
+  onSaveCategory,
+  onDeleteCategory,
 }) => {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [type, setType] = useState<TransactionType>(initialType);
   const [amountStr, setAmountStr] = useState<string>('');
   const [fromAccountId, setFromAccountId] = useState<string>('');
@@ -46,23 +55,46 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
 
   // Synchronize initial state on open
   useEffect(() => {
     if (isOpen) {
+      setErrorMsg(null);
+      if (initialTransaction) {
+        setType(initialTransaction.type);
+        setAmountStr(String(initialTransaction.amount));
+        setFromAccountId(initialTransaction.fromAccountId);
+        setToAccountId(initialTransaction.toAccountId || '');
+        setCategoryId(initialTransaction.categoryId);
+        setDate(initialTransaction.date);
+        setNote(initialTransaction.note);
+        return;
+      }
+
       setType(initialType);
       setAmountStr('');
-      setErrorMsg(null);
       const acc = defaultAccountId || accounts[0]?.id || '';
       setFromAccountId(acc);
       // toAccount default to 2nd account if exists
       const otherAcc = accounts.find((a) => a.id !== acc);
       setToAccountId(otherAcc?.id || '');
 
-      const availableCats = categories.filter((c) => c.type === (initialType === 'income' ? 'income' : 'expense'));
+      const availableCats = categoriesRef.current.filter(
+        (c) => c.type === (initialType === 'income' ? 'income' : 'expense')
+      );
       setCategoryId(availableCats[0]?.id || '');
     }
-  }, [isOpen, defaultAccountId, initialType, accounts, categories]);
+  }, [isOpen, defaultAccountId, initialType, initialTransaction, accounts]);
+
+  const handleDeleteCategory = (id: string) => {
+    onDeleteCategory(id);
+    if (categoryId === id) {
+      setCategoryId(categories.find((category) => category.id !== id && category.type === type)?.id || '');
+    }
+  };
 
   // When type changes, switch available category
   const handleTypeChange = (newType: TransactionType) => {
@@ -126,7 +158,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       amount,
       type,
       categoryId: type === 'transfer' ? '' : categoryId,
-      categoryName: type === 'transfer' ? 'ငွေလွှဲ' : selectedCat?.name || 'အထွေထွေ',
+      categoryName: type === 'transfer'
+        ? 'ငွေလွှဲ'
+        : selectedCat?.name ||
+          (categoryId === initialTransaction?.categoryId ? initialTransaction.categoryName : '') ||
+          'အထွေထွေ',
       fromAccountId,
       toAccountId: type === 'transfer' ? toAccountId : undefined,
       date,
@@ -201,8 +237,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   return (
     <Localized>
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4">
+      <div className="drawer-panel drawer-enter relative flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl rounded-b-none border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:rounded-3xl">
         <div className="border-b border-slate-200 px-4 pt-4 dark:border-slate-800 sm:px-6 sm:pt-5">
           <div className="flex items-center justify-between gap-3 pb-4">
             <div>
@@ -364,9 +400,18 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           {/* Account Selection */}
           <div className="space-y-4">
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
-                {fromAccountLabel}
-              </label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  {fromAccountLabel}
+                </label>
+                <button
+                  type="button"
+                  onClick={onManageAccounts}
+                  className="shrink-0 text-[11px] font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
+                >
+                  {language === 'en' ? 'Manage accounts' : 'အကောင့် စီမံရန်'}
+                </button>
+              </div>
               {renderAccountOptions(accounts, fromAccountId, setFromAccountId, fromAccountLabel)}
             </div>
 
@@ -402,9 +447,18 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
           {/* Category Chips (if not transfer) */}
           {type !== 'transfer' && (
             <div>
-              <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1.5">
-                အမျိုးအစား (Category) ရွေးချယ်ပါ
-              </label>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  အမျိုးအစား (Category) ရွေးချယ်ပါ
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryManagerOpen(true)}
+                  className="shrink-0 text-[11px] font-semibold text-emerald-700 hover:underline dark:text-emerald-400"
+                >
+                  {language === 'en' ? 'Manage categories' : 'အမျိုးအစား စီမံရန်'}
+                </button>
+              </div>
               <div
                 role="group"
                 aria-label={t('အမျိုးအစား')}
@@ -471,6 +525,13 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </form>
       </div>
     </div>
+    <CategoryManagerModal
+      isOpen={isCategoryManagerOpen}
+      onClose={() => setIsCategoryManagerOpen(false)}
+      categories={categories}
+      onSaveCategory={onSaveCategory}
+      onDeleteCategory={handleDeleteCategory}
+    />
     </Localized>
   );
 };

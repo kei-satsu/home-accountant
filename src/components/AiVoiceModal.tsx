@@ -3,6 +3,7 @@ import {
   Mic,
   MicOff,
   Sparkles,
+  Download,
   X,
   Send,
   Check,
@@ -16,6 +17,61 @@ import {
 import { Account, Category, Transaction } from '../types';
 import { formatMMK } from '../utils/ledger';
 import { Localized, useLanguage } from '../i18n';
+import type { AutomaticSpeechRecognitionPipeline, ProgressInfo } from '@huggingface/transformers';
+
+const SPEECH_MODEL_ID = 'onnx-community/whisper-tiny';
+const SPEECH_SAMPLE_RATE = 16_000;
+
+let speechPipelinePromise: Promise<AutomaticSpeechRecognitionPipeline> | null = null;
+
+const loadSpeechPipeline = (onProgress: (progress: ProgressInfo) => void) => {
+  if (!speechPipelinePromise) {
+    speechPipelinePromise = import('@huggingface/transformers')
+      .then(({ pipeline }) =>
+        pipeline('automatic-speech-recognition', SPEECH_MODEL_ID, {
+          device: 'wasm',
+          dtype: 'q8',
+          progress_callback: onProgress,
+        })
+      )
+      .catch((error: unknown) => {
+        speechPipelinePromise = null;
+        throw error;
+      });
+  }
+  return speechPipelinePromise;
+};
+
+const decodeAudioAtSpeechRate = async (blob: Blob) => {
+  const audioContext = new AudioContext();
+  try {
+    const decoded = await audioContext.decodeAudioData(await blob.arrayBuffer());
+    const channelCount = decoded.numberOfChannels;
+    const mono = new Float32Array(decoded.length);
+    for (let channel = 0; channel < channelCount; channel++) {
+      const channelData = decoded.getChannelData(channel);
+      for (let i = 0; i < channelData.length; i++) {
+        mono[i] += channelData[i] / channelCount;
+      }
+    }
+
+    if (decoded.sampleRate === SPEECH_SAMPLE_RATE) return mono;
+
+    const outputLength = Math.floor(mono.length * SPEECH_SAMPLE_RATE / decoded.sampleRate);
+    const resampled = new Float32Array(outputLength);
+    const sampleRatio = decoded.sampleRate / SPEECH_SAMPLE_RATE;
+    for (let i = 0; i < outputLength; i++) {
+      const sourceIndex = i * sampleRatio;
+      const lowerIndex = Math.floor(sourceIndex);
+      const upperIndex = Math.min(lowerIndex + 1, mono.length - 1);
+      const fraction = sourceIndex - lowerIndex;
+      resampled[i] = mono[lowerIndex] * (1 - fraction) + mono[upperIndex] * fraction;
+    }
+    return resampled;
+  } finally {
+    await audioContext.close();
+  }
+};
 
 interface AiVoiceModalProps {
   isOpen: boolean;
@@ -56,13 +112,15 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
   myanmarNumerals,
   onSaveTransaction,
 }) => {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [inputText, setInputText] = useState('');
-  const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isModelLoading, setIsModelLoading] = useState(false);
+  const [isModelReady, setIsModelReady] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [modelProgress, setModelProgress] = useState<number | null>(null);
   const [parsedResult, setParsedResult] = useState<ParsedResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [speechSupported, setSpeechSupported] = useState(true);
 
   // Editable parsed fields
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
@@ -71,75 +129,199 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState<string>('');
   const [type, setType] = useState<'income' | 'expense'>('expense');
+  const [audioRecordingSupported, setAudioRecordingSupported] = useState(false);
+  const [isAudioRecording, setIsAudioRecording] = useState(false);
 
-  const recognitionRef = useRef<any>(null);
+  const isOpenRef = useRef(isOpen);
+  const audioRecordingSupportedRef = useRef(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioSizeRef = useRef(0);
+  const audioTooLargeRef = useRef(false);
+  const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  isOpenRef.current = isOpen;
 
-  // Initialize Speech Recognition
   useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'my-MM'; // Burmese locale
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setErrorMsg(null);
-      };
-
-      recognition.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        setInputText(transcript);
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event.error);
-        setIsListening(false);
-        if (event.error === 'not-allowed') {
-          setErrorMsg(t('မိုက်ခရိုဖုန်း အသုံးပြုခွင့် ပေးထားရန် လိုအပ်ပါသည်။'));
-        }
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    } else {
-      setSpeechSupported(false);
-    }
-
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-      }
-    };
+    const canRecordAudio = Boolean(navigator.mediaDevices?.getUserMedia) && typeof MediaRecorder !== 'undefined';
+    audioRecordingSupportedRef.current = canRecordAudio;
+    setAudioRecordingSupported(canRecordAudio);
   }, []);
 
-  const toggleListening = () => {
-    if (!speechSupported) {
-      setErrorMsg(t('သင့် browser တွင် Speech Recognition အဆင်မပြေပါက စာရိုက်၍ ထည့်သွင်းနိုင်ပါသည်။'));
+  useEffect(() => {
+    if (!isOpen) {
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+      }
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      } else {
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+      }
+      setIsAudioRecording(false);
+    }
+  }, [isOpen]);
+
+  const handleLoadSpeechModel = async () => {
+    setIsModelLoading(true);
+    setModelProgress(0);
+    setErrorMsg(null);
+    try {
+      await loadSpeechPipeline((progress) => {
+        if (progress.status === 'progress_total' && progress.total > 0) {
+          setModelProgress(Math.round(progress.progress));
+        }
+      });
+      setIsModelReady(true);
+      setModelProgress(100);
+    } catch (error) {
+      console.error(
+        'Unable to load local speech model:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      setModelProgress(null);
+      setErrorMsg(t('စက်တွင်း speech model ကို မဖွင့်နိုင်ပါ။ ပထမဆုံး download လုပ်ရန် အင်တာနက်ချိတ်ဆက်ပြီး ထပ်စမ်းပါ။'));
+    } finally {
+      setIsModelLoading(false);
+    }
+  };
+
+  const startAudioRecording = async () => {
+    if (!audioRecordingSupportedRef.current || !navigator.mediaDevices?.getUserMedia) {
+      setErrorMsg(
+        language === 'en'
+          ? 'Audio recording is not available in this browser. Type your transaction instead.'
+          : 'ဤ browser တွင် အသံဖမ်းယူ၍မရပါ။ စာရိုက်ထည့်ပါ။'
+      );
       return;
     }
 
-    if (isListening) {
-      recognitionRef.current?.stop();
-    } else {
+    let stream: MediaStream | null = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!isOpenRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      const supportedMimeType = typeof MediaRecorder.isTypeSupported === 'function'
+        ? [
+            'audio/mp4',
+            'audio/webm;codecs=opus',
+            'audio/webm',
+            'audio/ogg;codecs=opus',
+          ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType))
+        : undefined;
+      const recorder = new MediaRecorder(stream, {
+        audioBitsPerSecond: 64_000,
+        ...(supportedMimeType ? { mimeType: supportedMimeType } : {}),
+      });
+      mediaStreamRef.current = stream;
+      stream = null;
+      audioChunksRef.current = [];
+      audioSizeRef.current = 0;
+      audioTooLargeRef.current = false;
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (audioTooLargeRef.current || event.data.size === 0) return;
+        if (audioSizeRef.current + event.data.size > 6 * 1024 * 1024) {
+          audioTooLargeRef.current = true;
+          if (recorder.state === 'recording') recorder.stop();
+          return;
+        }
+        audioSizeRef.current += event.data.size;
+        audioChunksRef.current.push(event.data);
+      };
+      recorder.onerror = () => {
+        if (recordingTimeoutRef.current) {
+          clearTimeout(recordingTimeoutRef.current);
+          recordingTimeoutRef.current = null;
+        }
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+        setIsAudioRecording(false);
+        setErrorMsg(
+          language === 'en'
+            ? 'Audio recording failed. Check microphone permissions and try again.'
+            : 'အသံဖမ်းယူမှု မအောင်မြင်ပါ။ မိုက်ခရိုဖုန်းခွင့်ပြုချက်ကို စစ်ဆေးပြီး ထပ်စမ်းပါ။'
+        );
+      };
+      recorder.onstop = () => {
+        if (recordingTimeoutRef.current) {
+          clearTimeout(recordingTimeoutRef.current);
+          recordingTimeoutRef.current = null;
+        }
+
+        const audioTooLarge = audioTooLargeRef.current;
+        audioTooLargeRef.current = false;
+        audioSizeRef.current = 0;
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: recorder.mimeType || 'audio/mp4',
+        });
+        audioChunksRef.current = [];
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+        setIsAudioRecording(false);
+
+        if (!isOpenRef.current) return;
+        if (audioTooLarge) {
+          setErrorMsg(
+            language === 'en'
+              ? 'The recording was too large. Record a shorter clip and try again.'
+              : 'အသံဖမ်းချက် အရမ်းကြီးနေပါသည်။ ပိုတိုအောင်ဖမ်းပြီး ထပ်စမ်းပါ။'
+          );
+          return;
+        }
+        if (audioBlob.size === 0) {
+          setErrorMsg(
+            language === 'en'
+              ? 'No audio was recorded. Try again.'
+              : 'အသံဖမ်းမရပါ။ ထပ်စမ်းကြည့်ပါ။'
+          );
+          return;
+        }
+        void handleTranscribeAudio(audioBlob);
+      };
+
+      recorder.start(1000);
       setInputText('');
       setParsedResult(null);
       setErrorMsg(null);
-      try {
-        recognitionRef.current?.start();
-      } catch (e) {
-        console.error(e);
-      }
+      setIsAudioRecording(true);
+      recordingTimeoutRef.current = setTimeout(() => {
+        if (recorder.state === 'recording') recorder.stop();
+      }, 30_000);
+    } catch (error) {
+      stream?.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+      console.error('Unable to record audio:', error);
+      setIsAudioRecording(false);
+      setErrorMsg(
+        error instanceof DOMException && error.name === 'NotAllowedError'
+          ? language === 'en'
+            ? 'Allow microphone access in your browser settings, then try again.'
+            : 'Browser ဆက်တင်တွင် မိုက်ခရိုဖုန်း အသုံးပြုခွင့်ပေးပြီး ထပ်စမ်းပါ။'
+          : language === 'en'
+            ? 'Could not start audio recording. Check your microphone and try again.'
+            : 'အသံဖမ်းယူမှု မစတင်နိုင်ပါ။ မိုက်ခရိုဖုန်းကို စစ်ဆေးပြီး ထပ်စမ်းပါ။'
+      );
     }
+  };
+
+  const toggleListening = async () => {
+    if (isAudioRecording) {
+      if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop();
+      return;
+    }
+
+    setInputText('');
+    setParsedResult(null);
+    setErrorMsg(null);
+    await startAudioRecording();
   };
 
   const handleProcessInput = async (textToProcess?: string) => {
@@ -206,6 +388,40 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
     }
   };
 
+  const handleTranscribeAudio = async (audioBlob: Blob) => {
+    setIsTranscribing(true);
+    setErrorMsg(null);
+    let processingStage: 'audio' | 'inference' = 'audio';
+    try {
+      const audio = await decodeAudioAtSpeechRate(audioBlob);
+      if (!speechPipelinePromise) throw new Error('speech-model-not-loaded');
+      const transcriber = await speechPipelinePromise;
+      processingStage = 'inference';
+      const result = await transcriber(audio, { language: 'burmese', task: 'transcribe' });
+      const transcript = result.text.trim();
+      if (!transcript) throw new Error('no-speech');
+      if (!isOpenRef.current) return;
+      setInputText(transcript);
+      await handleProcessInput(transcript);
+    } catch (error) {
+      console.error(
+        'Local audio transcription failed:',
+        error instanceof Error ? error.message : 'Unknown error'
+      );
+      setErrorMsg(
+        error instanceof Error && error.message === 'no-speech'
+          ? t('အသံမှ စာသားမရပါ။ ပိုရှင်းအောင် ပြောပြီး ထပ်စမ်းပါ။')
+          : error instanceof Error && error.message === 'speech-model-not-loaded'
+            ? t('အသံသုံးရန် speech model ကို အရင် download လုပ်ပါ။')
+          : processingStage === 'audio'
+            ? t('အသံဖိုင်ကို ဖတ်မရပါ။ ထပ်မံအသံဖမ်းပြီး စမ်းပါ။')
+            : t('စက်တွင်း model ဖြင့် အသံကို စာသားပြောင်းမရပါ။ ထပ်မံအသံဖမ်းပြီး စမ်းပါ။')
+      );
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
   const handleSelectAccountClarification = (accId: string) => {
     setSelectedAccountId(accId);
     if (parsedResult) {
@@ -253,13 +469,14 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
     'လစာ ၁၀ သိန်း KBZPay ထဲ ဝင်တယ်',
     'ကျောင်းစရိတ်ထဲက ကလေးစာအုပ် ၃သောင်းဖိုး ဝယ်တယ်',
   ];
+  const isVoiceActive = isAudioRecording;
 
   if (!isOpen) return null;
 
   return (
     <Localized>
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4">
+      <div className="drawer-panel drawer-enter relative flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-3xl rounded-b-none border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:rounded-3xl">
         {/* Modal Header */}
         <div className="p-5 sm:p-6 bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-700 text-white flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
@@ -324,22 +541,90 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
             </div>
           )}
 
+          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-indigo-950 dark:text-indigo-100">
+                  {t('စက်တွင်း AI speech model')}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                  {t('အသံဖြင့်သုံးရန် model ကို တစ်ကြိမ် download လုပ်ပါ။ အသံကို စက်ထဲမှာပဲ စာသားပြောင်းပါမည်။')}
+                </p>
+              </div>
+              {isModelReady && (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200">
+                  <Check className="h-3.5 w-3.5" />
+                  {t('model အဆင်သင့်ဖြစ်ပါပြီ')}
+                </span>
+              )}
+            </div>
+
+            {!isModelReady && (
+              <button
+                type="button"
+                onClick={handleLoadSpeechModel}
+                disabled={isModelLoading || isTranscribing || isLoading}
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isModelLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {isModelLoading
+                  ? t('model ကို download လုပ်နေသည်...')
+                  : t('စက်တွင်း model ကို download လုပ်မည်')}
+              </button>
+            )}
+
+            {isModelLoading && (
+              <div className="mt-3" aria-live="polite">
+                <div
+                  role="progressbar"
+                  aria-label={t('model download တိုးတက်မှု')}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={modelProgress ?? 0}
+                  className="h-2 overflow-hidden rounded-full bg-indigo-100 dark:bg-slate-700"
+                >
+                  <div
+                    className="h-full rounded-full bg-indigo-600 transition-[width] duration-300"
+                    style={{ width: `${modelProgress ?? 0}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-right text-xs font-bold text-indigo-800 dark:text-indigo-200">
+                  {modelProgress ?? 0}%
+                </p>
+              </div>
+            )}
+
+            {isModelReady && (
+              <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300" role="status">
+                {t('စက်တွင်း model ကို download လုပ်ပြီးပါပြီ။ အသံသွင်းနိုင်ပါပြီ။')}
+              </p>
+            )}
+          </div>
+
           {/* Voice Input Section with Visualizer */}
           <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-b from-indigo-50/50 to-white dark:from-slate-800/40 dark:to-slate-900 border border-indigo-100 dark:border-slate-800 text-center">
             <div className="relative">
-              {isListening && (
+              {isVoiceActive && (
                 <div className="absolute inset-0 rounded-full bg-indigo-500/30 animate-ping scale-150" />
               )}
               <button
+                type="button"
                 onClick={toggleListening}
-                className={`relative z-10 w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all ${
-                  isListening
+                disabled={!audioRecordingSupported || !isModelReady || isModelLoading || isLoading || isTranscribing}
+                className={`relative z-10 w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all disabled:cursor-not-allowed disabled:opacity-50 ${
+                  isVoiceActive
                     ? 'bg-rose-500 shadow-rose-500/50 scale-105'
                     : 'bg-gradient-to-tr from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 shadow-indigo-500/30 hover:scale-105 active:scale-95'
                 }`}
-                aria-label={isListening ? 'Stop listening' : 'Start voice input'}
+                aria-label={isVoiceActive
+                  ? 'Stop local audio recording'
+                  : 'Start local audio recording'}
               >
-                {isListening ? (
+                {isVoiceActive ? (
                   <MicOff className="w-8 h-8 animate-pulse" />
                 ) : (
                   <Mic className="w-8 h-8" />
@@ -348,7 +633,22 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
             </div>
 
             <p className="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">
-              {isListening ? 'နားထောင်နေပါသည်...' : 'မိုက်ခရိုဖုန်းကို နှိပ်၍ ပြောပါ'}
+              {isAudioRecording
+                ? language === 'en'
+                  ? 'Recording... Tap the mic again to finish.'
+                  : 'အသံဖမ်းနေပါသည်။ ပြီးလျှင် mic ကို ထပ်နှိပ်ပါ။'
+                : isTranscribing
+                  ? t('အသံကို ဤစက်ပေါ်တွင် စာသားပြောင်းနေသည်...')
+                  : isModelLoading
+                    ? t('model ကို download လုပ်နေသည်...')
+                  : !audioRecordingSupported
+                    ? t('ဤ browser တွင် အသံဖမ်းခြင်း မရနိုင်ပါ။')
+                    : !isModelReady
+                      ? t('အသံသုံးရန် speech model ကို အရင် download လုပ်ပါ။')
+                    : t('Mic ကိုနှိပ်၍ အသံဖမ်းပြီး စာသားပြောင်းရန် ထပ်နှိပ်ပါ။')}
+            </p>
+            <p className="mt-2 max-w-md text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+              {t('အသံကို ဤစက်ပေါ်တွင် စာသားပြောင်းပါမည်။ ပထမအကြိမ်တွင် model ကို download လုပ်ပြီး cache ထားပါမည်။ အသံဖိုင်ကို မပို့ဘဲ စာသားကိုသာ transaction ခွဲခြမ်းစိတ်ဖြာရန် ပို့ပါမည်။')}
             </p>
           </div>
 
@@ -370,11 +670,11 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
               />
               <button
                 onClick={() => handleProcessInput()}
-                disabled={isLoading || !isOnline || !inputText.trim()}
+                disabled={isLoading || isTranscribing || !isOnline || !inputText.trim()}
                 className="absolute right-2 p-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white transition-colors"
                 title="AI ခွဲခြမ်းစိတ်ဖြာမည်"
               >
-                {isLoading ? (
+                {isLoading || isTranscribing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Send className="w-4 h-4" />
@@ -396,7 +696,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
                     setInputText(p);
                     handleProcessInput(p);
                   }}
-                  disabled={!isOnline || isLoading}
+                  disabled={!isOnline || isLoading || isTranscribing}
                   className="text-xs py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors border border-slate-200 dark:border-slate-700 text-left"
                 >
                   "{p}"

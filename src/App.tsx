@@ -185,6 +185,7 @@ export default function App() {
   // Modals
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [modalDefaultAccountId, setModalDefaultAccountId] = useState<string | undefined>();
   const [modalInitialType, setModalInitialType] = useState<TransactionType>('expense');
   const [isDriveModalOpen, setIsDriveModalOpen] = useState(false);
@@ -298,8 +299,38 @@ export default function App() {
     setTransactions((prev) => [newTx, ...prev]);
   };
 
+  const handleUpdateTransaction = (id: string, tx: Omit<Transaction, 'id' | 'createdAt'>) => {
+    setTransactions((prev) =>
+      prev.map((existing) =>
+        existing.id === id ? { ...tx, id, createdAt: existing.createdAt } : existing
+      )
+    );
+  };
+
   const handleDeleteTransaction = (id: string) => {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const handleSaveCategory = (category: Category) => {
+    setCategories((prev) =>
+      prev.some((existing) => existing.name.toLocaleLowerCase() === category.name.toLocaleLowerCase())
+        ? prev
+        : [...prev, category]
+    );
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    setCategories((prev) => prev.filter((category) => category.id !== id));
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    setTransactionToEdit(transaction);
+    setIsAddModalOpen(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setIsAddModalOpen(false);
+    setTransactionToEdit(null);
   };
 
   const handleOpenAddModal = (defaultAccId?: string, type: TransactionType = 'expense') => {
@@ -307,6 +338,7 @@ export default function App() {
       setIsAccountManagerOpen(true);
       return;
     }
+    setTransactionToEdit(null);
     setModalDefaultAccountId(defaultAccId);
     setModalInitialType(type);
     setIsAddModalOpen(true);
@@ -317,6 +349,7 @@ export default function App() {
       setIsAccountManagerOpen(true);
       return;
     }
+    setTransactionToEdit(null);
     setModalDefaultAccountId(fromAccId);
     setModalInitialType('transfer');
     setIsAddModalOpen(true);
@@ -708,6 +741,7 @@ export default function App() {
                 selectedMonth={selectedMonth}
                 myanmarNumerals={myanmarNumerals}
                 onDeleteTransaction={handleDeleteTransaction}
+                onEditTransaction={handleEditTransaction}
               />
             </div>
           </div>
@@ -733,6 +767,7 @@ export default function App() {
             selectedMonth={selectedMonth}
             myanmarNumerals={myanmarNumerals}
             onDeleteTransaction={handleDeleteTransaction}
+            onEditTransaction={handleEditTransaction}
           />
         )}
       </main>
@@ -839,14 +874,22 @@ export default function App() {
 
       <AddTransactionModal
         isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        onClose={handleCloseAddModal}
         accounts={accounts}
         categories={categories}
         balances={balances}
         myanmarNumerals={myanmarNumerals}
         defaultAccountId={modalDefaultAccountId}
-        initialType={modalInitialType}
-        onSave={handleSaveTransaction}
+        initialType={transactionToEdit?.type ?? modalInitialType}
+        initialTransaction={transactionToEdit ?? undefined}
+        onSave={
+          transactionToEdit
+            ? (tx) => handleUpdateTransaction(transactionToEdit.id, tx)
+            : handleSaveTransaction
+        }
+        onManageAccounts={() => setIsAccountManagerOpen(true)}
+        onSaveCategory={handleSaveCategory}
+        onDeleteCategory={handleDeleteCategory}
       />
 
       <DriveSyncModal

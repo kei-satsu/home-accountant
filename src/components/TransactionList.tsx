@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   List,
   Search,
-  Filter,
-  Trash2,
   TrendingDown,
   TrendingUp,
   ArrowRightLeft,
@@ -46,6 +44,7 @@ interface TransactionListProps {
   selectedMonth: string;
   myanmarNumerals: boolean;
   onDeleteTransaction: (id: string) => void;
+  onEditTransaction: (transaction: Transaction) => void;
 }
 
 export const TransactionList: React.FC<TransactionListProps> = ({
@@ -54,14 +53,34 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   selectedMonth,
   myanmarNumerals,
   onDeleteTransaction,
+  onEditTransaction,
 }) => {
   const { language, t } = useLanguage();
   const [filterType, setFilterType] = useState<string>('all');
   const [filterAccount, setFilterAccount] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [contextMenuId, setContextMenuId] = useState<string | null>(null);
+  const longPressTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearLongPress = () => {
+    if (longPressTimeout.current) {
+      clearTimeout(longPressTimeout.current);
+      longPressTimeout.current = null;
+    }
+  };
+
+  useEffect(() => clearLongPress, []);
 
   const accountMap = new Map(accounts.map((a) => [a.id, a]));
+  const categoryNames = Array.from(
+    new Set(
+      transactions
+        .filter((tx) => tx.type !== 'transfer' && tx.categoryName)
+        .map((tx) => tx.categoryName)
+    )
+  );
 
   // Filter transactions
   const filtered = transactions.filter((tx) => {
@@ -77,6 +96,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         return false;
       }
     }
+
+    // Category filter
+    if (filterCategory !== 'all' && tx.categoryName !== filterCategory) return false;
 
     // Search query
     if (searchQuery.trim()) {
@@ -206,16 +228,16 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {/* Search Input */}
         <div className="relative col-span-2 sm:col-span-1">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="ရှာဖွေရန်..."
-            className="w-full py-2 pl-9 pr-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+            className="h-10 w-full pl-9 pr-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
           />
         </div>
 
@@ -224,7 +246,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="w-full py-2 px-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold"
+            className="h-10 w-full px-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold"
           >
             <option value="all">အမျိုးအစား အားလုံး</option>
             <option value="expense">အသုံးစရိတ်</option>
@@ -238,12 +260,28 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           <select
             value={filterAccount}
             onChange={(e) => setFilterAccount(e.target.value)}
-            className="w-full py-2 px-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold"
+            className="h-10 w-full px-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold"
           >
             <option value="all">အကောင့် အားလုံး</option>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Category Filter */}
+        <div className="col-span-2 flex items-center sm:col-span-1">
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="h-10 w-full px-3 text-xs rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold"
+          >
+            <option value="all">{t('အမျိုးအစား (Category) အားလုံး')}</option>
+            {categoryNames.map((categoryName) => (
+              <option key={categoryName} value={categoryName}>
+                {categoryName}
               </option>
             ))}
           </select>
@@ -278,14 +316,45 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                 const fromAccount = accountMap.get(tx.fromAccountId);
                 const toAccount = tx.toAccountId ? accountMap.get(tx.toAccountId) : null;
                 const isDeleting = confirmDeleteId === tx.id;
+                const isMenuOpen = contextMenuId === tx.id;
 
                 return (
                   <div
                     key={tx.id}
-                    className="group p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 transition-colors flex items-center justify-between gap-2 sm:gap-3"
+                    tabIndex={0}
+                    aria-label={`${tx.note || tx.categoryName}, ${formatMMK(tx.amount, myanmarNumerals)}`}
+                    onPointerDown={(event) => {
+                      if (
+                        event.button !== 0 ||
+                        (event.target instanceof Element && event.target.closest('button'))
+                      ) {
+                        return;
+                      }
+                      clearLongPress();
+                      longPressTimeout.current = setTimeout(() => {
+                        setContextMenuId(tx.id);
+                        setConfirmDeleteId(null);
+                      }, 550);
+                    }}
+                    onPointerUp={clearLongPress}
+                    onPointerLeave={clearLongPress}
+                    onPointerCancel={clearLongPress}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      setContextMenuId(tx.id);
+                      setConfirmDeleteId(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                        event.preventDefault();
+                        setContextMenuId(tx.id);
+                        setConfirmDeleteId(null);
+                      }
+                    }}
+                    className="group relative p-3 rounded-2xl bg-slate-50 hover:bg-slate-100/80 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 transition-colors flex items-center justify-between gap-2 sm:gap-3"
                   >
                 {/* Left side: Icon & Title */}
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex flex-1 items-center gap-3 min-w-0">
                   <div
                     className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white ${
                       tx.type === 'expense'
@@ -305,15 +374,15 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   </div>
 
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                        {tx.note || tx.categoryName}
-                      </h4>
+                    <div className="flex flex-col items-start gap-1">
                       {tx.categoryName && tx.type !== 'transfer' && (
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 shrink-0">
+                        <span className="max-w-full whitespace-normal break-words text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                           {tx.categoryName}
                         </span>
                       )}
+                      <h4 className="max-w-full whitespace-normal break-words text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                        {tx.note || tx.categoryName}
+                      </h4>
                     </div>
 
                     {/* Account information */}
@@ -335,11 +404,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   </div>
                 </div>
 
-                {/* Right side: Amount & Delete button */}
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right">
+                {/* Right side: Amount */}
+                <div className="flex min-w-0 max-w-[45%] items-center gap-3">
+                  <div className="min-w-0 text-right">
                     <p
-                      className={`text-sm sm:text-base font-extrabold ${
+                      className={`break-all text-sm sm:text-base font-extrabold ${
                         tx.type === 'income'
                           ? 'text-emerald-600 dark:text-emerald-400'
                           : tx.type === 'expense'
@@ -351,36 +420,67 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       {formatMMK(tx.amount, myanmarNumerals)}
                     </p>
                   </div>
-
-                  {/* Delete with inline confirmation */}
-                  {isDeleting ? (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => {
-                          onDeleteTransaction(tx.id);
-                          setConfirmDeleteId(null);
-                        }}
-                        className="py-1 px-2 rounded-lg bg-rose-600 text-white text-[10px] font-bold"
-                      >
-                        ဖျက်မည်
-                      </button>
-                      <button
-                        onClick={() => setConfirmDeleteId(null)}
-                        className="py-1 px-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px]"
-                      >
-                        မဖျက်ပါ
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDeleteId(tx.id)}
-                      title="ဖျက်ပစ်မည်"
-                      className="sm:opacity-60 sm:group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
                 </div>
+                {isMenuOpen && (
+                  <div
+                    role="menu"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    className="absolute right-2 top-full z-30 mt-1 min-w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <p className="px-2 py-1 text-[11px] text-slate-600 dark:text-slate-300">
+                          ဖျက်ရန် သေချာပါသလား။
+                        </p>
+                        <button
+                          role="menuitem"
+                          onClick={() => {
+                            onDeleteTransaction(tx.id);
+                            setConfirmDeleteId(null);
+                            setContextMenuId(null);
+                          }}
+                          className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                        >
+                          ဖျက်မည်
+                        </button>
+                        <button
+                          role="menuitem"
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="w-full rounded-lg px-2 py-1.5 text-left text-xs text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                        >
+                          မဖျက်ပါ
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          role="menuitem"
+                          onClick={() => {
+                            setContextMenuId(null);
+                            onEditTransaction(tx);
+                          }}
+                          className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                        >
+                          ပြင်ဆင်မည်
+                        </button>
+                        <button
+                          role="menuitem"
+                          onClick={() => setConfirmDeleteId(tx.id)}
+                          className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                        >
+                          ဖျက်မည်
+                        </button>
+                        <button
+                          role="menuitem"
+                          onClick={() => setContextMenuId(null)}
+                          className="w-full rounded-lg px-2 py-1.5 text-left text-xs text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                        >
+                          ပိတ်မည်
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
                   </div>
                 );
               })}
