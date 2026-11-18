@@ -731,7 +731,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
           {/* Parsed Result Preview & Confirmation Card */}
           {parsedResult && (
             <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 space-y-4 animate-in fade-in-50">
-              {parsedResult.source !== 'gemini-3.8-flash' && (
+              {parsedResult.source !== 'gemini-3.5-flash-lite' && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
                   {parsedResult.source === 'rule-engine'
                     ? 'Gemini API key မရှိသေးပါ။ အောက်ပါရလဒ်ကို စည်းမျဉ်းအခြေပြု parser ဖြင့် ခန့်မှန်းထားသောကြောင့် မသိမ်းမီ သေချာစစ်ဆေးပါ။'
@@ -741,7 +741,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
               <div className="flex items-center justify-between border-b border-emerald-200 dark:border-emerald-800 pb-2">
                 <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  {parsedResult.source === 'gemini-3.8-flash'
+                  {parsedResult.source === 'gemini-3.5-flash-lite'
                     ? 'Gemini AI တွေ့ရှိချက် စစ်ဆေးရန်:'
                     : 'အလိုအလျောက် ခွဲခြမ်းစိတ်ဖြာမှု (စည်းမျဉ်းအခြေပြု) စစ်ဆေးရန်:'}
                 </span>

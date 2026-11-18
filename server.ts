@@ -91,7 +91,7 @@ Your task:
     );
 
     const generatePromise = requestAiClient.models.generateContent({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-3.5-flash-lite',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -130,7 +130,7 @@ Your task:
       }
     }
 
-    return res.json({ result: parsed, source: 'gemini-3.8-flash' });
+    return res.json({ result: parsed, source: 'gemini-3.5-flash-lite' });
   } catch (err: any) {
     console.error(
       'Gemini parsing failed:',
