@@ -16,31 +16,9 @@ import {
 } from 'lucide-react';
 import { Account, Category, Transaction } from '../types';
 import { formatMMK } from '../utils/ledger';
+import { loadBurmeseAsr, transcribeBurmese, type BurmeseAsr } from '../utils/burmeseAsr';
 import { Localized, useLanguage } from '../i18n';
-import type { AutomaticSpeechRecognitionPipeline, ProgressInfo } from '@huggingface/transformers';
-
-const SPEECH_MODEL_ID = 'onnx-community/whisper-tiny';
 const SPEECH_SAMPLE_RATE = 16_000;
-
-let speechPipelinePromise: Promise<AutomaticSpeechRecognitionPipeline> | null = null;
-
-const loadSpeechPipeline = (onProgress: (progress: ProgressInfo) => void) => {
-  if (!speechPipelinePromise) {
-    speechPipelinePromise = import('@huggingface/transformers')
-      .then(({ pipeline }) =>
-        pipeline('automatic-speech-recognition', SPEECH_MODEL_ID, {
-          device: 'wasm',
-          dtype: 'q8',
-          progress_callback: onProgress,
-        })
-      )
-      .catch((error: unknown) => {
-        speechPipelinePromise = null;
-        throw error;
-      });
-  }
-  return speechPipelinePromise;
-};
 
 const decodeAudioAtSpeechRate = async (blob: Blob) => {
   const audioContext = new AudioContext();
@@ -119,6 +97,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
   const [isModelReady, setIsModelReady] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [modelProgress, setModelProgress] = useState<number | null>(null);
+  const asrModelRef = useRef<BurmeseAsr | null>(null);
   const [parsedResult, setParsedResult] = useState<ParsedResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -169,11 +148,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
     setModelProgress(0);
     setErrorMsg(null);
     try {
-      await loadSpeechPipeline((progress) => {
-        if (progress.status === 'progress_total' && progress.total > 0) {
-          setModelProgress(Math.round(progress.progress));
-        }
-      });
+      asrModelRef.current = await loadBurmeseAsr(setModelProgress);
       setIsModelReady(true);
       setModelProgress(100);
     } catch (error) {
@@ -182,7 +157,7 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
         error instanceof Error ? error.message : 'Unknown error'
       );
       setModelProgress(null);
-      setErrorMsg(t('စက်တွင်း speech model ကို မဖွင့်နိုင်ပါ။ ပထမဆုံး download လုပ်ရန် အင်တာနက်ချိတ်ဆက်ပြီး ထပ်စမ်းပါ။'));
+      setErrorMsg(t('မြန်မာ speech model ကို download သို့မဟုတ် load မလုပ်နိုင်ပါ။ Internet နှင့် device storage ကို စစ်ပြီး ထပ်စမ်းပါ။'));
     } finally {
       setIsModelLoading(false);
     }
@@ -394,11 +369,9 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
     let processingStage: 'audio' | 'inference' = 'audio';
     try {
       const audio = await decodeAudioAtSpeechRate(audioBlob);
-      if (!speechPipelinePromise) throw new Error('speech-model-not-loaded');
-      const transcriber = await speechPipelinePromise;
+      if (!asrModelRef.current) throw new Error('speech-model-not-loaded');
       processingStage = 'inference';
-      const result = await transcriber(audio, { language: 'burmese', task: 'transcribe' });
-      const transcript = result.text.trim();
+      const transcript = await transcribeBurmese(audio, asrModelRef.current);
       if (!transcript) throw new Error('no-speech');
       if (!isOpenRef.current) return;
       setInputText(transcript);
@@ -545,10 +518,10 @@ export const AiVoiceModal: React.FC<AiVoiceModalProps> = ({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-bold text-indigo-950 dark:text-indigo-100">
-                  {t('စက်တွင်း AI speech model')}
+                  {t('မြန်မာစကားသီးသန့် AI speech model')}
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                  {t('အသံဖြင့်သုံးရန် model ကို တစ်ကြိမ် download လုပ်ပါ။ အသံကို စက်ထဲမှာပဲ စာသားပြောင်းပါမည်။')}
+                  {t('မြန်မာစကားကို စာသားပြောင်းရန် model ကို တစ်ကြိမ် download လုပ်ပါ (78 MB ခန့်)။ အသံကို စက်ထဲမှာပဲ စာသားပြောင်းပါမည်။')}
                 </p>
               </div>
               {isModelReady && (
