@@ -155,13 +155,11 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
     }
   };
 
-  const handleBackupNow = async (useCurrentAccessToken = false) => {
+  const handleBackupNow = async () => {
     setIsSyncing(true);
     setStatusMsg(null);
     try {
-      const token = useCurrentAccessToken
-        ? (await getAccessToken()) || (await reauthenticateDriveAccess())
-        : await reauthenticateDriveAccess();
+      const token = (await getAccessToken()) || (await reauthenticateDriveAccess());
 
       const result = await uploadBackupToDrive(appState, token);
       setDriveFile({ id: result.fileId, modifiedTime: result.modifiedTime });
@@ -187,15 +185,13 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
     }
   };
 
-  const handleConfirmRestore = async (useCurrentAccessToken = false) => {
+  const handleConfirmRestore = async () => {
     if (!driveFile) return;
     setIsSyncing(true);
     setStatusMsg(null);
     setShowRestoreConfirm(false);
     try {
-      const token = useCurrentAccessToken
-        ? (await getAccessToken()) || (await reauthenticateDriveAccess())
-        : await reauthenticateDriveAccess();
+      const token = (await getAccessToken()) || (await reauthenticateDriveAccess());
 
       const { state, modifiedTime } = await downloadBackupFromDrive(driveFile.id, token);
       onRestoreState(state);
@@ -430,7 +426,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                   </p>
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <button
-                      onClick={() => handleBackupNow(true)}
+                      onClick={handleBackupNow}
                       disabled={isSyncing || isCheckingDrive || !isOnline}
                       className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                     >
@@ -473,7 +469,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                   ) : (
                     <CloudUpload className="w-5 h-5" />
                   )}
-                  <span>Google account အတည်ပြုပြီး သိမ်းမည်</span>
+                  <span>Drive သို့ ယခု သိမ်းမည်</span>
                   <span className="text-[10px] font-normal text-blue-100">
                     {appState.geminiApiKey
                       ? 'စာရင်းများသာ Drive သို့ သိမ်းမည် (API key မပါဝင်ပါ)'
@@ -489,7 +485,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                   <CloudDownload className="w-5 h-5 text-emerald-600" />
                   <span>Drive မှ ပြန်ယူမည်</span>
                   <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">
-                    Google account ကို ပြန်အတည်ပြုပြီး Drive မှ ပြန်ယူမည်
+                    Drive ထဲက နောက်ဆုံး backup ကို ပြန်ယူမည်
                   </span>
                 </button>
               </div>}
@@ -537,7 +533,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                   မလုပ်ဆောင်ပါ
                 </button>
                 <button
-                  onClick={() => handleConfirmRestore(syncChoice === 'choose-source')}
+                  onClick={handleConfirmRestore}
                   disabled={isSyncing}
                   className="py-1.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs"
                 >

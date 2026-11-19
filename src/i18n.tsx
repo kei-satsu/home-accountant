@@ -371,6 +371,8 @@ const translations: Record<string, string> = {
   'Drive ခွင့်ပြုချက် မရရှိသေးပါ။ Sync ကိုဖွင့်၍ Google account ဖြင့် ပြန်ချိတ်ဆက်ပါ။': 'Drive permission is missing. Open sync settings and reconnect your Google account.',
   'Google Drive သို့ အလိုအလျောက် သိမ်းဆည်းနေပါသည်...': 'Automatically saving to Google Drive...',
   'Google Drive သို့ သိမ်းဆည်းပြီးပါပြီ (': 'Saved to Google Drive (',
+  'Drive သို့ ယခု သိမ်းမည်': 'Back up to Drive now',
+  'Drive ထဲက နောက်ဆုံး backup ကို ပြန်ယူမည်': 'Restore the latest backup from Drive',
   'Drive သို့ အလိုအလျောက် သိမ်းမရပါ။ Sync ကိုဖွင့်၍ account ခွင့်ပြုချက်နှင့် အင်တာနက်ကို စစ်ဆေးပါ။': 'Could not automatically save to Drive. Check your account permissions and internet connection.',
   'ကြည့်ပါ': 'Review',
   'Main Account တွင် စတင်လက်ကျန်ငွေကို သတ်မှတ်ပါ။ နောက်ထပ်အကောင့်များကို လိုအပ်မှသာ ကိုယ်တိုင်ထည့်နိုင်ပါတယ်။': 'Set an opening balance for your Main Account. Add more accounts only if you need them.',
