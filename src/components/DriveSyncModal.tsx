@@ -18,6 +18,7 @@ import {
   logout,
   getAccessToken,
   reauthenticateDriveAccess,
+  clearCachedAccessToken,
 } from '../services/auth';
 import {
   findDriveBackupFile,
@@ -84,6 +85,10 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
         setSyncChoice(file ? 'choose-source' : 'no-backup');
       }
     } catch (err: any) {
+      if (err instanceof Error && err.message.includes('access expired or was revoked')) {
+        const token = await getAccessToken();
+        if (token) clearCachedAccessToken(token);
+      }
       console.warn('Failed to query drive file:', err);
       setStatusMsg({
         type: 'error',
@@ -112,6 +117,7 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
         setDriveFile(file ? { id: file.id, modifiedTime: file.modifiedTime } : null);
         setSyncChoice(file ? 'choose-source' : 'no-backup');
       } catch (error) {
+        clearCachedAccessToken(res.accessToken);
         console.error('Failed to check for an existing Drive backup:', error);
         setStatusMsg({
           type: 'error',
@@ -142,13 +148,17 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
       const result = await uploadBackupToDrive(appState, token);
       setDriveFile({ id: result.fileId, modifiedTime: result.modifiedTime });
       onDriveSyncReady(true);
-      onUpdateSyncTime(result.modifiedTime, Boolean(appState.geminiApiKey));
+      onUpdateSyncTime(result.modifiedTime, false);
       setSyncChoice(null);
       setStatusMsg({
         type: 'success',
         text: t('Google Drive ပေါ်သို့ စာရင်းဒေတာများ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ!'),
       });
     } catch (err: any) {
+      if (err instanceof Error && err.message.includes('access expired or was revoked')) {
+        const token = await getAccessToken();
+        if (token) clearCachedAccessToken(token);
+      }
       console.error(err);
       setStatusMsg({
         type: 'error',
@@ -172,13 +182,17 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
       const { state, modifiedTime } = await downloadBackupFromDrive(driveFile.id, token);
       onRestoreState(state);
       onDriveSyncReady(true);
-      onUpdateSyncTime(modifiedTime, Boolean(state.geminiApiKey));
+      onUpdateSyncTime(modifiedTime, false);
       setSyncChoice(null);
       setStatusMsg({
         type: 'success',
         text: t('Google Drive ပေါ်ရှိ စာရင်းဒေတာများကို အောင်မြင်စွာ ပြန်လည်ရယူပြီးပါပြီ!'),
       });
     } catch (err: any) {
+      if (err instanceof Error && err.message.includes('access expired or was revoked')) {
+        const token = await getAccessToken();
+        if (token) clearCachedAccessToken(token);
+      }
       console.error(err);
       setStatusMsg({
         type: 'error',
@@ -444,8 +458,8 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
                   <span>Google account အတည်ပြုပြီး သိမ်းမည်</span>
                   <span className="text-[10px] font-normal text-blue-100">
                     {appState.geminiApiKey
-                      ? 'စာရင်းနှင့် API key ကို Drive သို့ backup လုပ်မည်'
-                      : 'လက်ရှိစာရင်းများကို Drive သို့ ပို့မည်'}
+                      ? 'စာရင်းများသာ Drive သို့ သိမ်းမည် (API key မပါဝင်ပါ)'
+                      : 'လက်ရှိစာရင်းများကို Drive သို့ ပို့မည် (API key မပါဝင်ပါ)'}
                   </span>
                 </button>
 

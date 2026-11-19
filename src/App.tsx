@@ -9,6 +9,7 @@ import {
   Mic,
   ArrowRightLeft,
   Cloud,
+  MoreHorizontal,
   AlertTriangle,
   X,
   CheckCircle2,
@@ -36,7 +37,8 @@ import { TransactionList } from './components/TransactionList';
 import { DriveSyncModal } from './components/DriveSyncModal';
 import { AccountManagerModal } from './components/AccountManagerModal';
 import { GeminiApiKeyModal } from './components/GeminiApiKeyModal';
-import { getAccessToken } from './services/auth';
+import { MorePage } from './components/MorePage';
+import { clearCachedAccessToken, getAccessToken } from './services/auth';
 import { uploadBackupToDrive } from './services/driveSync';
 import { Localized } from './i18n';
 
@@ -168,7 +170,7 @@ export default function App() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'charts' | 'records'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'charts' | 'records' | 'more'>('dashboard');
 
   // Firebase Auth state
   const [user, setUser] = useState<User | null>(null);
@@ -458,6 +460,9 @@ export default function App() {
         }
       } catch (error) {
         if (active) {
+          if (error instanceof Error && error.message.includes('access expired or was revoked')) {
+            clearCachedAccessToken(token);
+          }
           console.error('Automatic Drive sync failed:', error);
           setDriveSyncStatus('error');
           setDriveSyncMessage('Drive သို့ အလိုအလျောက် သိမ်းမရပါ။ Sync ကိုဖွင့်၍ account ခွင့်ပြုချက်နှင့် အင်တာနက်ကို စစ်ဆေးပါ။');
@@ -561,6 +566,18 @@ export default function App() {
             >
               <List className="w-4 h-4" />
               <span>မှတ်တမ်း</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('more')}
+              className={`py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all ${
+                activeTab === 'more'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <MoreHorizontal className="w-4 h-4" />
+              <span>ဆက်တင်များ</span>
             </button>
           </div>
         </div>
@@ -770,6 +787,19 @@ export default function App() {
             onEditTransaction={handleEditTransaction}
           />
         )}
+
+        {activeTab === 'more' && (
+          <MorePage
+            user={user}
+            hasGeminiApiKey={Boolean(geminiApiKey)}
+            darkMode={darkMode}
+            onToggleDarkMode={() => setDarkMode((current) => !current)}
+            myanmarNumerals={myanmarNumerals}
+            onToggleMyanmarNumerals={() => setMyanmarNumerals((current) => !current)}
+            onOpenDriveSync={() => setIsDriveModalOpen(true)}
+            onOpenApiKeySettings={() => setIsGeminiApiKeyModalOpen(true)}
+          />
+        )}
       </main>
 
       <footer className="border-t border-slate-200 px-4 py-5 text-center text-xs text-slate-600 dark:border-slate-800 dark:text-slate-400">
@@ -840,21 +870,16 @@ export default function App() {
           <span>မှတ်တမ်း</span>
         </button>
 
-        {/* Google Drive Sync */}
+        {/* More settings */}
         <button
-          onClick={() => setIsDriveModalOpen(true)}
-          className={`relative flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2 rounded-lg transition-colors cursor-pointer ${
-            user ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-500 dark:text-slate-400'
+          onClick={() => setActiveTab('more')}
+          className={`flex flex-col items-center gap-0.5 text-[10px] font-semibold py-1 px-2 rounded-lg transition-colors cursor-pointer ${
+            activeTab === 'more' ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-500 dark:text-slate-400'
           }`}
-          title="Google Drive Sync"
+          title="ဆက်တင်များ"
         >
-          <div className="relative">
-            <Cloud className="w-5 h-5" />
-            {!user && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900" />
-            )}
-          </div>
-          <span>Sync</span>
+          <MoreHorizontal className="w-5 h-5" />
+          <span>ဆက်တင်များ</span>
         </button>
       </nav>
 
