@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import {
+  auth,
   googleSignIn,
   logout,
   getAccessToken,
@@ -127,11 +128,19 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
         setIsCheckingDrive(false);
       }
     } catch (err: unknown) {
-      console.error(err);
       const errorCode =
         err && typeof err === 'object' && 'code' in err && typeof err.code === 'string'
           ? err.code
           : '';
+      if (errorCode === 'auth/popup-closed-by-user' && auth.currentUser) {
+        setStatusMsg({
+          type: 'info',
+          text: t('Google အကောင့်ဝင်ပြီးပါပြီ။ Drive အသုံးပြုခွင့်ကို မအတည်ပြုရသေးပါ။ Drive Sync အသုံးပြုရန် ခွင့်ပြုချက်တောင်းခံလာပါက အတည်ပြုပေးပါ။'),
+        });
+        return;
+      }
+
+      console.error(err);
       const errorMessage =
         err instanceof Error && err.message === 'Google sign-in completed, but Drive access was not granted.'
           ? t('Google အကောင့်ဝင်ပြီးပါပြီ၊ Drive အသုံးပြုခွင့် မရရှိပါ။ Google Drive ခွင့်ပြုချက်ကို အတည်ပြုပြီး ထပ်ကြိုးစားပါ။')
@@ -498,11 +507,15 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
               className={`p-3.5 rounded-2xl text-xs flex items-start gap-2 border ${
                 statusMsg.type === 'success'
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
-                  : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+                  : statusMsg.type === 'info'
+                    ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200'
+                    : 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
               }`}
             >
               {statusMsg.type === 'success' ? (
                 <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
+              ) : statusMsg.type === 'info' ? (
+                <CheckCircle className="w-4 h-4 shrink-0 text-blue-600" />
               ) : (
                 <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
               )}

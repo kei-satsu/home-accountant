@@ -356,6 +356,7 @@ const translations: Record<string, string> = {
   'Firebase တွင် Google sign-in ကို ဖွင့်ထားခြင်း မရှိပါ။': 'Google sign-in is not enabled in Firebase.',
   'Browser က sign-in popup ကို ပိတ်ထားပါသည်။ Popup ခွင့်ပြုပြီး ထပ်ကြိုးစားပါ။': 'Your browser blocked the sign-in popup. Allow popups and try again.',
   'Google sign-in popup ကို မပြီးဆုံးမီ ပိတ်လိုက်ပါသည်။': 'The Google sign-in popup was closed before it finished.',
+  'Google အကောင့်ဝင်ပြီးပါပြီ။ Drive အသုံးပြုခွင့်ကို မအတည်ပြုရသေးပါ။ Drive Sync အသုံးပြုရန် ခွင့်ပြုချက်တောင်းခံလာပါက အတည်ပြုပေးပါ။': 'Google sign-in succeeded, but Drive access was not authorized. Approve the Drive permission request to use Drive sync.',
   'အိမ်စရင်း': 'household-ledger',
   'AI ဖြင့် ခွဲခြမ်းစိတ်ဖြာရာတွင်': 'AI analysis',
   'အင်္ဂလိပ်ဂဏန်း သုံးနေပါသည်': 'English numerals are on',
