@@ -20,7 +20,6 @@ const ACCESS_TOKEN_MAX_AGE_MS = 50 * 60 * 1000;
 const provider = new GoogleAuthProvider();
 provider.addScope(DRIVE_SCOPE);
 
-let isSigningIn = false;
 let cachedAccessToken: string | null = null;
 let cachedAccessTokenExpiresAt = 0;
 
@@ -30,41 +29,47 @@ const cacheAccessToken = (accessToken: string) => {
 };
 
 export const initAuth = (
-  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthSuccess?: (user: User, token: string | null) => void,
   onAuthFailure?: () => void
 ) => {
-  return onAuthStateChanged(auth, async (user: User | null) => {
+  return onAuthStateChanged(auth, (user: User | null) => {
     if (user) {
-      if (cachedAccessToken && Date.now() < cachedAccessTokenExpiresAt) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      } else if (!isSigningIn) {
+      const accessToken =
+        cachedAccessToken && Date.now() < cachedAccessTokenExpiresAt
+          ? cachedAccessToken
+          : null;
+      if (!accessToken) {
         cachedAccessToken = null;
         cachedAccessTokenExpiresAt = 0;
-        if (onAuthFailure) onAuthFailure();
       }
+      onAuthSuccess?.(user, accessToken);
     } else {
       cachedAccessToken = null;
       cachedAccessTokenExpiresAt = 0;
-      if (onAuthFailure) onAuthFailure();
+      onAuthFailure?.();
     }
   });
 };
 
 export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
   try {
-    isSigningIn = true;
     const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Failed to obtain Google access token');
+    let accessToken = GoogleAuthProvider.credentialFromResult(result)?.accessToken;
+    if (!accessToken) {
+      const driveProvider = new GoogleAuthProvider();
+      driveProvider.addScope(DRIVE_SCOPE);
+      driveProvider.setCustomParameters({ prompt: 'consent' });
+      const driveResult = await reauthenticateWithPopup(result.user, driveProvider);
+      accessToken = GoogleAuthProvider.credentialFromResult(driveResult)?.accessToken;
     }
-    cacheAccessToken(credential.accessToken);
-    return { user: result.user, accessToken: credential.accessToken };
+    if (!accessToken) {
+      throw new Error('Google sign-in completed, but Drive access was not granted.');
+    }
+    cacheAccessToken(accessToken);
+    return { user: result.user, accessToken };
   } catch (error) {
     console.error('Sign in error:', error);
     throw error;
-  } finally {
-    isSigningIn = false;
   }
 };
 

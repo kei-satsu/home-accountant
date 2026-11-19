@@ -126,11 +126,29 @@ export const DriveSyncModal: React.FC<DriveSyncModalProps> = ({
       } finally {
         setIsCheckingDrive(false);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
+      const errorCode =
+        err && typeof err === 'object' && 'code' in err && typeof err.code === 'string'
+          ? err.code
+          : '';
+      const errorMessage =
+        err instanceof Error && err.message === 'Google sign-in completed, but Drive access was not granted.'
+          ? t('Google အကောင့်ဝင်ပြီးပါပြီ၊ Drive အသုံးပြုခွင့် မရရှိပါ။ Google Drive ခွင့်ပြုချက်ကို အတည်ပြုပြီး ထပ်ကြိုးစားပါ။')
+          : errorCode === 'auth/unauthorized-domain'
+            ? t('ဤ website domain ကို Firebase Authentication တွင် ခွင့်ပြုထားခြင်း မရှိပါ။')
+            : errorCode === 'auth/operation-not-allowed'
+              ? t('Firebase တွင် Google sign-in ကို ဖွင့်ထားခြင်း မရှိပါ။')
+              : errorCode === 'auth/popup-blocked'
+                ? t('Browser က sign-in popup ကို ပိတ်ထားပါသည်။ Popup ခွင့်ပြုပြီး ထပ်ကြိုးစားပါ။')
+                : errorCode === 'auth/popup-closed-by-user'
+                  ? t('Google sign-in popup ကို မပြီးဆုံးမီ ပိတ်လိုက်ပါသည်။')
+                  : errorCode
+                    ? `${t('Google အကောင့်ဖြင့် ဝင်ရောက်ခြင်း မအောင်မြင်ပါ။ ကျေးဇူးပြု၍ ပြန်လည်စမ်းသပ်ကြည့်ပါ။')} (${errorCode})`
+                    : t('Google အကောင့်ဖြင့် ဝင်ရောက်ခြင်း မအောင်မြင်ပါ။ ကျေးဇူးပြု၍ ပြန်လည်စမ်းသပ်ကြည့်ပါ။');
       setStatusMsg({
         type: 'error',
-        text: t('Google အကောင့်ဖြင့် ဝင်ရောက်ခြင်း မအောင်မြင်ပါ။ ကျေးဇူးပြု၍ ပြန်လည်စမ်းသပ်ကြည့်ပါ။'),
+        text: errorMessage,
       });
     } finally {
       setIsSigningIn(false);
